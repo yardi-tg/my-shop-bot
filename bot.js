@@ -1,10 +1,3 @@
-/**
- * ─────────────────────────────────────────────────────────────
- *  TELEGRAM SHOP BOT — Backend
- *  Receives orders from the Mini App and sends them to you
- * ─────────────────────────────────────────────────────────────
- */
-
 const express = require("express");
 const cors = require("cors");
 
@@ -13,13 +6,9 @@ app.use(cors());
 app.use(express.json());
 
 // ════════════════════════════════════════════════
-//  ✏️  YOUR BOT DETAILS
-// ════════════════════════════════════════════════
-
 const BOT_TOKEN = "8234528536:AAFRTSt72MH-g1BzROc19dPss9QUdSjwGsM";
 const YOUR_CHAT_ID = "8551836923";
 const SHOP_URL = "https://my-shop-bot.vercel.app";
-
 // ════════════════════════════════════════════════
 
 const TELEGRAM_API = `https://api.telegram.org/bot${BOT_TOKEN}`;
@@ -30,6 +19,30 @@ async function sendTelegramMessage(chatId, text) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ chat_id: chatId, text, parse_mode: "HTML" }),
+  });
+  return res.json();
+}
+
+// ── Send order to owner WITH a Reply to Customer button ───────
+async function sendOrderToOwner(text, customerUserId, customerHandle) {
+  const inline_keyboard = [];
+
+  // Button to open direct chat with customer
+  if (customerHandle && customerHandle !== "No username") {
+    inline_keyboard.push([{ text: "💬 Reply to Customer", url: `https://t.me/${customerHandle.replace("@", "")}` }]);
+  } else if (customerUserId && customerUserId !== "N/A") {
+    inline_keyboard.push([{ text: "💬 Reply to Customer", url: `tg://user?id=${customerUserId}` }]);
+  }
+
+  const res = await fetch(`${TELEGRAM_API}/sendMessage`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      chat_id: YOUR_CHAT_ID,
+      text,
+      parse_mode: "HTML",
+      reply_markup: { inline_keyboard }
+    }),
   });
   return res.json();
 }
@@ -127,12 +140,15 @@ app.post("/order", async (req, res) => {
       noteSection +
       `\n\n⏰ ${new Date().toLocaleString()}`;
 
-    await sendTelegramMessage(YOUR_CHAT_ID, ownerMsg);
+    // Send order to owner with reply button
+    await sendOrderToOwner(ownerMsg, user.id, user.handle);
 
+    // Send confirmation to customer
     if (order.user?.id && order.user.id !== "N/A") {
-      await sendTelegramMessage(
+      await sendWithShopButton(
         order.user.id,
-        `✅ <b>Order received!</b>\n\nThanks ${user.name || "there"}, we got your order and will get back to you shortly! 🙏`
+        `✅ <b>Order received!</b>\n\nThanks ${user.name || "there"}, we got your order and will get back to you shortly! 🙏`,
+        "🛍️ Order Again"
       );
     }
 

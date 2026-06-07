@@ -569,17 +569,19 @@
     const total = items.reduce((sum, i) => sum + i.qty * i.price, 0);
     const note = document.getElementById("orderNote").value.trim();
 
-    // Build the order message text — will be pre-filled in the bot chat
-    const itemLines = items.map(i => `• ${i.qty}x ${i.name} — ${CURRENCY} ${i.qty * i.price}`).join("%0A");
+    // Build the pre-written message the customer sends to YOU
+    const itemLines = items.map(i => `- ${i.qty}x ${i.name} — ${CURRENCY} ${i.qty * i.price}`).join("%0A");
     const noteSection = note ? `%0A📝 Note: ${note}` : "";
-    const orderText = `🛍️ New Order!%0A%0AItems:%0A${itemLines}%0A%0A💰 Total: ${CURRENCY} ${total}${noteSection}`;
+    const orderText =
+      `I'd like to order this.%0A` +
+      `${itemLines}%0A` +
+      `💰 Total: ${CURRENCY} ${total}` +
+      noteSection;
 
-    closeCart();
-
-    // Close the Mini App and open the bot chat with order pre-filled
-    // Customer just taps Send — you receive it directly in your chat with them!
-    const botUsername = "arbeiter1bot";
-    const deepLink = `https://t.me/${botUsername}?text=${orderText}`;
+    // Open YOUR personal Telegram chat with the order already typed
+    // Customer just taps Send!
+    const ownerUsername = "Standonbu51ness";
+    const deepLink = `https://t.me/${ownerUsername}?text=${orderText}`;
 
     if (tg) {
       tg.openTelegramLink(deepLink);

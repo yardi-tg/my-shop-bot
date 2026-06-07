@@ -6,7 +6,7 @@ app.use(cors());
 app.use(express.json());
 
 // ════════════════════════════════════════════════
-const BOT_TOKEN = "8234528536:AAFRTSt72MH-g1BzROc19dPss9QUdSjwGsM";
+const BOT_TOKEN = process.env.BOT_TOKEN;
 const YOUR_CHAT_ID = "8551836923";
 const SHOP_URL = "https://my-shop-bot.vercel.app";
 // ════════════════════════════════════════════════

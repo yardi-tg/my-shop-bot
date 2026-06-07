@@ -557,13 +557,9 @@
     renderCartItems();
   }
 
-  async function submitOrder() {
+  function submitOrder() {
     const cartKeys = Object.keys(cart).filter(id => cart[id] > 0);
     if (cartKeys.length === 0) return;
-
-    const btn = document.getElementById("orderBtn");
-    btn.disabled = true;
-    btn.textContent = "Sending...";
 
     const items = cartKeys.map(id => {
       const p = PRODUCTS.find(p => p.id == id);
@@ -573,36 +569,21 @@
     const total = items.reduce((sum, i) => sum + i.qty * i.price, 0);
     const note = document.getElementById("orderNote").value.trim();
 
-    // Get Telegram user info if available
-    const user = tg?.initDataUnsafe?.user;
-    const userName = user ? `${user.first_name || ""} ${user.last_name || ""}`.trim() : "Unknown";
-    const userHandle = user?.username ? `@${user.username}` : "No username";
-    const userId = user?.id || "N/A";
+    // Build the order message — pre-filled in customer's chat with you
+    const itemLines = items.map(i => `• ${i.qty}x ${i.name} — ${CURRENCY} ${i.qty * i.price}`).join("\n");
+    const noteSection = note ? `\n📝 Note: ${note}` : "";
 
-    const payload = {
-      user: { name: userName, handle: userHandle, id: userId },
-      items,
-      total,
-      currency: CURRENCY,
-      note,
-      initData: tg?.initData || ""
-    };
+    const orderText =
+      `🛍️ New Order!\n\n` +
+      `Items:\n${itemLines}\n\n` +
+      `💰 Total: ${CURRENCY} ${total}` +
+      noteSection;
 
-    try {
-      await fetch(BOT_BACKEND_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-    } catch (e) {
-      console.error("Order send failed:", e);
+    // This closes the Mini App and sends the order text directly
+    // into the customer's chat with your bot — they just tap Send!
+    if (tg) {
+      tg.sendData(orderText);
     }
-
-    closeCart();
-    document.getElementById("successScreen").classList.add("show");
-
-    // Close the mini app after 3 seconds
-    setTimeout(() => { if (tg) tg.close(); }, 3000);
   }
 </script>
 </body>

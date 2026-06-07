@@ -77,6 +77,27 @@ app.post("/webhook", async (req, res) => {
     const text = message.text || "";
     const firstName = message.from?.first_name || "there";
 
+    // Handle order sent via tg.sendData() from Mini App
+    if (update.message?.web_app_data) {
+      const orderText = update.message.web_app_data.data;
+      const firstName = update.message.from?.first_name || "A customer";
+      const handle = update.message.from?.username ? `@${update.message.from.username}` : "no username";
+      const userId = update.message.from?.id;
+
+      // Forward the order to YOU with a reply button
+      await sendOrderToOwner(
+        `🛍️ <b>New Order!</b>\n👤 <b>${firstName}</b> (${handle})\n\n${orderText}`,
+        userId,
+        handle
+      );
+
+      // Confirm to the customer
+      await sendTelegramMessage(chatId,
+        `✅ <b>Order received!</b>\n\nThanks ${firstName}! We got your order and will get back to you shortly. 🙏`
+      );
+      return res.json({ ok: true });
+    }
+
     if (text === "/start") {
       await sendWithShopButton(
         chatId,

@@ -362,6 +362,16 @@
 </head>
 <body>
 
+  <!-- LOCK SCREEN -->
+  <div id="lockScreen" style="position:fixed;inset:0;background:#0f0f0f;z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;text-align:center;">
+    <div style="font-size:48px;margin-bottom:20px;">🔒</div>
+    <div style="font-family:'Playfair Display',serif;font-size:24px;color:#e8c97e;margin-bottom:10px;">Yardi's Shop</div>
+    <div style="color:#888;font-size:14px;margin-bottom:30px;">Enter today's access code to continue</div>
+    <input id="codeInput" type="text" inputmode="numeric" maxlength="4" placeholder="0000" style="background:#1a1a1a;border:1px solid #2e2e2e;color:#f0ece2;border-radius:12px;padding:14px 20px;font-size:24px;text-align:center;letter-spacing:8px;width:160px;outline:none;margin-bottom:16px;" />
+    <button id="unlockBtn" style="background:#e8c97e;color:#000;border:none;border-radius:12px;padding:14px 32px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;cursor:pointer;">Unlock Shop</button>
+    <div id="lockError" style="color:#e07070;font-size:13px;margin-top:14px;display:none;">Incorrect code, please try again.</div>
+  </div>
+
   <!-- HEADER -->
   <div class="header">
     <div class="header-title">✦ My Shop</div>
@@ -427,6 +437,39 @@
 
   const tg = window.Telegram?.WebApp;
   if (tg) { tg.ready(); tg.expand(); }
+
+  // ── Lock screen logic ──────────────────────────────────────
+  document.getElementById("unlockBtn").addEventListener("click", checkAccessCode);
+  document.getElementById("codeInput").addEventListener("keypress", (e) => {
+    if (e.key === "Enter") checkAccessCode();
+  });
+
+  async function checkAccessCode() {
+    const code = document.getElementById("codeInput").value.trim();
+    const errorEl = document.getElementById("lockError");
+    if (code.length !== 4) {
+      errorEl.textContent = "Please enter the 4-digit code.";
+      errorEl.style.display = "block";
+      return;
+    }
+    try {
+      const res = await fetch(BOT_BACKEND_URL.replace("/order", "/check-code"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code })
+      });
+      const data = await res.json();
+      if (data.valid) {
+        document.getElementById("lockScreen").style.display = "none";
+      } else {
+        errorEl.textContent = "Incorrect code, please try again.";
+        errorEl.style.display = "block";
+      }
+    } catch (e) {
+      errorEl.textContent = "Connection error, please try again.";
+      errorEl.style.display = "block";
+    }
+  }
 
   let cart = {}; // { productId: quantity }
 

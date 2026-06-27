@@ -6,7 +6,7 @@ app.use(cors());
 app.use(express.json());
 
 // ════════════════════════════════════════════════
-const BOT_TOKEN = process.env.BOT_TOKEN;
+const BOT_TOKEN = "8234528536:AAFRTSt72MH-g1BzROc19dPss9QUdSjwGsM";
 const YOUR_CHAT_ID = "8551836923";
 const SHOP_URL = "https://my-shop-bot.vercel.app";
 // ════════════════════════════════════════════════
@@ -66,6 +66,28 @@ async function sendWithShopButton(chatId, text, buttonLabel) {
   return res.json();
 }
 
+// ── Daily access code generator ───────────────────────────────
+// Generates a new 4-digit code every day automatically, based on today's date
+function getTodaysCode() {
+  const today = new Date().toISOString().slice(0, 10); // e.g. "2026-06-27"
+  let hash = 0;
+  for (let i = 0; i < today.length; i++) {
+    hash = (hash * 31 + today.charCodeAt(i)) % 10000;
+  }
+  return String(hash).padStart(4, "0");
+}
+
+// ── Endpoint the Mini App calls to check if a code is correct ──
+app.post("/check-code", (req, res) => {
+  const { code } = req.body;
+  const todaysCode = getTodaysCode();
+  if (code === todaysCode) {
+    res.json({ valid: true });
+  } else {
+    res.json({ valid: false });
+  }
+});
+
 // ── Webhook — handles all incoming Telegram messages ─────────
 app.post("/webhook", async (req, res) => {
   try {
@@ -113,6 +135,12 @@ app.post("/webhook", async (req, res) => {
         `🍔 <b>Our menu is ready!</b>\n\nTap below to browse everything we offer:`,
         "🛍️ View Menu"
       );
+    } else if (text === "/code") {
+      if (String(chatId) === String(YOUR_CHAT_ID)) {
+        await sendTelegramMessage(chatId, `🔑 <b>Today's access code:</b>\n\n<code>${getTodaysCode()}</code>\n\nShare this with customers you want to give shop access to today.`);
+      } else {
+        await sendTelegramMessage(chatId, `🔒 Please ask the shop owner for today's access code.`);
+      }
     } else if (text === "/contact") {
       await sendTelegramMessage(
         chatId,

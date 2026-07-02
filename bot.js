@@ -106,7 +106,7 @@ app.post("/webhook", async (req, res) => {
         handle
       );
       await sendTelegramMessage(chatId,
-        `✅ <b>Order received!</b>\n\nThanks ${firstName}! We got your order and will get back to you shortly. 🙏`
+        `✅ <b>Bestellung erhalten!</b>\n\nDanke ${firstName}! Wir haben deine Bestellung erhalten und melden uns in Kürze. 🙏`
       );
       return res.json({ ok: true });
     }
@@ -114,22 +114,22 @@ app.post("/webhook", async (req, res) => {
     if (text === "/start") {
       await sendWithShopButton(
         chatId,
-        `👋 <b>Welcome to Yardi's Shop, ${firstName}!</b>\n\n` +
-        `🍉 Fresh fruities & tasty bites, ready for you!\n\n` +
-        `Browse our menu, pick what you love, and place your order in seconds. 😍\n\n` +
-        `👇 Tap below to open the shop:`,
-        "🛍️ Open Shop"
+        `👋 <b>Willkommen bei Yardi's Shop, ${firstName}!</b>\n\n` +
+        `🍉 Frische Früchte & leckere Snacks, bereit für dich!\n\n` +
+        `Stöbere durch unser Menü, wähle deine Lieblingsprodukte und bestelle in Sekunden. 😍\n\n` +
+        `👇 Tippe unten, um den Shop zu öffnen:`,
+        "🛍️ Shop öffnen"
       );
     } else if (text === "/menu") {
       await sendWithShopButton(
         chatId,
-        `🍔 <b>Our menu is ready!</b>\n\nTap below to browse everything we offer:`,
-        "🛍️ View Menu"
+        `🍔 <b>Unser Menü ist bereit!</b>\n\nTippe unten, um alles zu sehen, was wir anbieten:`,
+        "🛍️ Menü ansehen"
       );
     } else if (text === "/code") {
       if (String(chatId) === String(YOUR_CHAT_ID)) {
         await sendTelegramMessage(chatId,
-          `🔑 <b>Today's access code:</b>\n\n<code>${getTodaysCode()}</code>\n\nShare this with customers you want to give shop access to today.`
+          `🔑 <b>Heutiger Zugangscode:</b>\n\n<code>${getTodaysCode()}</code>\n\nTeile diesen Code mit Kunden, denen du heute Zugang zum Shop gewähren möchtest.`
         );
       } else {
         // Send message with button to contact owner directly
@@ -138,11 +138,11 @@ app.post("/webhook", async (req, res) => {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             chat_id: chatId,
-            text: `🔒 <b>Shop Access Required</b>\n\nThis shop is private. To get today's access code, contact the shop owner directly!`,
+            text: `🔒 <b>Zugang erforderlich</b>\n\nDieser Shop ist privat. Um den heutigen Zugangscode zu erhalten, kontaktiere den Shopinhaber direkt!`,
             parse_mode: "HTML",
             reply_markup: {
               inline_keyboard: [[
-                { text: "💬 Contact Shop Owner", url: "https://t.me/Standonbu51ness?text=Hi!%20I'd%20like%20to%20access%20Yardi's%20Shop.%20Can%20I%20get%20today's%20code%3F%20🛍️" }
+                { text: "💬 Shopinhaber kontaktieren", url: "https://t.me/Standonbu51ness?text=Hallo!%20Ich%20möchte%20gerne%20auf%20Yardi's%20Shop%20zugreifen.%20Kann%20ich%20den%20heutigen%20Code%20bekommen%3F%20🛍️" }
               ]]
             }
           })
@@ -151,18 +151,18 @@ app.post("/webhook", async (req, res) => {
     } else if (text === "/contact") {
       await sendTelegramMessage(
         chatId,
-        `📞 <b>Contact Us</b>\n\nHave a question or need help with your order?\nJust send us a message and we'll get back to you shortly! 🙏`
+        `📞 <b>Kontakt</b>\n\nHast du eine Frage oder brauchst du Hilfe bei deiner Bestellung?\nSchreib uns einfach eine Nachricht und wir melden uns so schnell wie möglich! 🙏`
       );
     } else {
       await sendWithShopButton(
         chatId,
-        `😊 Hey ${firstName}! Use these commands:\n\n` +
-        `/start — Welcome & open shop\n` +
-        `/menu — Browse our menu\n` +
-        `/code — Get today's access code\n` +
-        `/contact — Get in touch\n\n` +
-        `Or just tap the button below:`,
-        "🛍️ Open Shop"
+        `😊 Hey ${firstName}! Verwende diese Befehle:\n\n` +
+        `/start — Willkommen & Shop öffnen\n` +
+        `/menu — Unser Menü ansehen\n` +
+        `/code — Heutigen Zugangscode erhalten\n` +
+        `/contact — Kontakt aufnehmen\n\n` +
+        `Oder tippe einfach auf den Button unten:`,
+        "🛍️ Shop öffnen"
       );
     }
 
@@ -197,8 +197,8 @@ app.post("/order", async (req, res) => {
     if (order.user?.id && order.user.id !== "N/A") {
       await sendWithShopButton(
         order.user.id,
-        `✅ <b>Order received!</b>\n\nThanks ${user.name || "there"}, we got your order and will get back to you shortly! 🙏`,
-        "🛍️ Order Again"
+        `✅ <b>Bestellung erhalten!</b>\n\nDanke ${user.name || ""}! Wir haben deine Bestellung erhalten und melden uns in Kürze! 🙏`,
+        "🛍️ Nochmal bestellen"
       );
     }
     res.json({ success: true });
@@ -210,11 +210,11 @@ app.post("/order", async (req, res) => {
 
 // ── Health check ──────────────────────────────────────────────
 app.get("/", (req, res) => {
-  res.send("✅ Shop bot is running!");
+  res.send("✅ Shop-Bot läuft!");
 });
 
 // ── Start server ──────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`🚀 Bot backend running on port ${PORT}`);
+  console.log(`🚀 Bot-Backend läuft auf Port ${PORT}`);
 });

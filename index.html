@@ -324,6 +324,47 @@
     .order-btn:hover { background: var(--accent2); transform: scale(1.01); }
     .order-btn:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; transform: none; }
 
+    /* FLOATING CART BAR */
+    #floatingCart {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      right: 20px;
+      background: var(--accent);
+      color: #000;
+      border-radius: 16px;
+      padding: 16px 20px;
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 700;
+      font-size: 15px;
+      cursor: pointer;
+      z-index: 150;
+      box-shadow: 0 8px 30px rgba(232,201,126,0.35);
+      transform: translateY(100px);
+      transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1), background 0.2s;
+      animation: none;
+    }
+    #floatingCart.show {
+      display: flex;
+      transform: translateY(0);
+    }
+    #floatingCart:active { transform: scale(0.98); }
+    .fc-left {
+      background: rgba(0,0,0,0.15);
+      padding: 4px 12px;
+      border-radius: 50px;
+      font-size: 13px;
+    }
+    .fc-center {
+      letter-spacing: 0.5px;
+    }
+    .fc-right {
+      font-size: 16px;
+    }
+
     /* EMPTY CART */
     .empty-cart {
       text-align: center;
@@ -439,6 +480,15 @@
 
   <!-- PRODUCTS -->
   <div id="productSections"></div>
+
+  <!-- FLOATING CART BAR -->
+  <div id="floatingCart" onclick="openCart()">
+    <div class="fc-left">
+      <span id="fcCount">0</span> Artikel
+    </div>
+    <div class="fc-center">Zum Warenkorb</div>
+    <div class="fc-right" id="fcTotal">CHF 0</div>
+  </div>
 
   <!-- CART DRAWER -->
   <div class="drawer-overlay" id="drawerOverlay" onclick="closeCart()"></div>
@@ -562,42 +612,43 @@
 
   function shatterScreen(canvas) {
     const lockScreen = document.getElementById("lockScreen");
-    const cols = 6, rows = 10;
-    const tileW = window.innerWidth / cols;
-    const tileH = window.innerHeight / rows;
-    const tiles = [];
+    const ctx = canvas.getContext("2d");
 
-    // Create shatter tiles covering the screen
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols; c++) {
-        const tile = document.createElement("div");
-        tile.className = "shatter-tile";
-        tile.style.width = tileW + "px";
-        tile.style.height = tileH + "px";
-        tile.style.left = (c * tileW) + "px";
-        tile.style.top = (r * tileH) + "px";
-        document.body.appendChild(tile);
-        tiles.push(tile);
-      }
-    }
+    // Elegant light-burst dissolve: bright flash from center, then fade to reveal shop
+    const burst = document.createElement("div");
+    burst.style.cssText = `
+      position:fixed; inset:0; z-index:720; pointer-events:none;
+      background: radial-gradient(circle at center, #0f0 0%, #0f08 20%, transparent 60%);
+      opacity:0; transition: opacity 0.4s ease;
+    `;
+    document.body.appendChild(burst);
 
-    // Hide canvas and lock screen behind tiles
-    canvas.style.display = "none";
-    lockScreen.style.display = "none";
+    // Flash bright
+    requestAnimationFrame(() => { burst.style.opacity = "1"; });
 
-    // Fling tiles outward in all directions
     setTimeout(() => {
-      tiles.forEach(tile => {
-        const angle = Math.random() * Math.PI * 2;
-        const dist = 400 + Math.random() * 800;
-        const x = Math.cos(angle) * dist;
-        const y = Math.sin(angle) * dist;
-        const rot = (Math.random() - 0.5) * 720;
-        tile.style.transform = `translate(${x}px, ${y}px) rotate(${rot}deg) scale(0.3)`;
-        tile.style.opacity = "0";
-      });
-      setTimeout(() => tiles.forEach(t => t.remove()), 1100);
-    }, 50);
+      // Fade the whole matrix+burst away smoothly, revealing the shop underneath
+      canvas.style.transition = "opacity 0.8s ease";
+      burst.style.transition = "opacity 0.8s ease";
+      lockScreen.style.transition = "opacity 0.8s ease";
+      canvas.style.opacity = "0";
+      burst.style.opacity = "0";
+      lockScreen.style.opacity = "0";
+
+      setTimeout(() => {
+        canvas.style.display = "none";
+        lockScreen.style.display = "none";
+        canvas.style.opacity = "1";
+        burst.remove();
+        // Gentle welcome pop on the shop header
+        const header = document.querySelector(".header-title");
+        if (header) {
+          header.style.transition = "transform 0.5s cubic-bezier(0.34,1.56,0.64,1)";
+          header.style.transform = "scale(1.15)";
+          setTimeout(() => { header.style.transform = "scale(1)"; }, 500);
+        }
+      }, 800);
+    }, 400);
   }
 
   async function checkAccessCode() {
@@ -724,21 +775,33 @@
   }
 
   function updateCartUI() {
-    const total = Object.values(cart).reduce((a, b) => a + b, 0);
+    const count = Object.values(cart).reduce((a, b) => a + b, 0);
     const badge = document.getElementById("cartBadge");
-    badge.textContent = total;
-    badge.classList.toggle("show", total > 0);
+    badge.textContent = count;
+    badge.classList.toggle("show", count > 0);
+
+    // Update floating cart bar
+    const fc = document.getElementById("floatingCart");
+    const priceTotal = Object.keys(cart).reduce((sum, id) => {
+      const p = PRODUCTS.find(p => p.id == id);
+      return sum + (p ? p.price * cart[id] : 0);
+    }, 0);
+    document.getElementById("fcCount").textContent = count;
+    document.getElementById("fcTotal").textContent = `${CURRENCY} ${priceTotal.toFixed(2)}`;
+    fc.classList.toggle("show", count > 0);
   }
 
   function openCart() {
     renderCartItems();
     document.getElementById("drawer").classList.add("open");
     document.getElementById("drawerOverlay").classList.add("open");
+    document.getElementById("floatingCart").classList.remove("show");
   }
 
   function closeCart() {
     document.getElementById("drawer").classList.remove("open");
     document.getElementById("drawerOverlay").classList.remove("open");
+    updateCartUI();
   }
 
   function renderCartItems() {

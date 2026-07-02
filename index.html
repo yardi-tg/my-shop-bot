@@ -433,7 +433,7 @@
       background: #000;
       border: 1px solid #0f03;
       z-index: 700;
-      transition: transform 1.4s cubic-bezier(0.5, 0, 1, 1), opacity 1.4s ease;
+      transition: transform 1.8s cubic-bezier(0.4, 0, 1, 1), opacity 1.8s ease;
       pointer-events: none;
     }
     @keyframes glitchFlash {
@@ -596,18 +596,11 @@
       ctx.save();
     }, 1200);
 
-    // After 2.6 seconds: glitch flash + shatter
+    // After 2 seconds: shatter
     setTimeout(() => {
-      const flash = document.getElementById("glitchFlash");
-      flash.style.display = "block";
-      flash.style.animation = "glitchFlash 0.5s ease";
-
-      setTimeout(() => {
-        matrixRunning = false;
-        flash.style.display = "none";
-        shatterScreen(canvas);
-      }, 500);
-    }, 2600);
+      matrixRunning = false;
+      shatterScreen(canvas);
+    }, 2000);
   }
 
   function shatterScreen(canvas) {

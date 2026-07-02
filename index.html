@@ -459,19 +459,24 @@
 <script>
   // ─── EDIT YOUR PRODUCTS HERE ───────────────────────────────────────────────
   const PRODUCTS = [
-    { id: 1, name: "Klassischer Burger", desc: "Rindfleisch-Patty, Salat, Tomate, Käse", price: 250, emoji: "🍔", category: "Essen" },
-    { id: 2, name: "Scharfes Hähnchen", desc: "Knuspriges Hähnchen mit scharfer Soße", price: 220, emoji: "🌶️", category: "Essen" },
-    { id: 3, name: "Gemüse-Wrap", desc: "Frisches Gemüse in einer warmen Tortilla", price: 180, emoji: "🌯", category: "Essen" },
-    { id: 4, name: "Pommes Frites", desc: "Golden, knusprig, gesalzen", price: 80, emoji: "🍟", category: "Beilagen" },
-    { id: 5, name: "Zwiebelringe", desc: "Knusprige panierte Zwiebelringe", price: 90, emoji: "🧅", category: "Beilagen" },
-    { id: 6, name: "Krautsalat", desc: "Cremiger hausgemachter Krautsalat", price: 60, emoji: "🥗", category: "Beilagen" },
-    { id: 7, name: "Mangosaft", desc: "Frisch gemixter Mango", price: 70, emoji: "🥭", category: "Getränke" },
-    { id: 8, name: "Zitronen-Soda", desc: "Kaltes sprudelndes Zitronengetränk", price: 50, emoji: "🍋", category: "Getränke" },
-    { id: 9, name: "Eiskaffee", desc: "Cold Brew mit Milch", price: 90, emoji: "☕", category: "Getränke" },
+    { id: 1, name: "Tomaten", desc: "Frische reife Tomaten, 1kg", price: 3.50, emoji: "🍅", category: "Gemüse" },
+    { id: 2, name: "Karotten", desc: "Frische Karotten, 1kg", price: 2.50, emoji: "🥕", category: "Gemüse" },
+    { id: 3, name: "Brokkoli", desc: "Frischer Brokkoli, 500g", price: 3.00, emoji: "🥦", category: "Gemüse" },
+    { id: 4, name: "Spinat", desc: "Frischer Babyspinat, 300g", price: 2.80, emoji: "🌿", category: "Gemüse" },
+    { id: 5, name: "Zucchini", desc: "Frische Zucchini, 500g", price: 2.50, emoji: "🥒", category: "Gemüse" },
+    { id: 6, name: "Paprika", desc: "Bunte Paprika-Mix, 500g", price: 4.00, emoji: "🫑", category: "Gemüse" },
+    { id: 7, name: "Aubergine", desc: "Frische Aubergine, 500g", price: 3.20, emoji: "🍆", category: "Gemüse" },
+    { id: 8, name: "Salat", desc: "Frischer grüner Salat, 1 Stück", price: 2.00, emoji: "🥬", category: "Salat & Kräuter" },
+    { id: 9, name: "Rucola", desc: "Frischer Rucola, 150g", price: 2.50, emoji: "🌱", category: "Salat & Kräuter" },
+    { id: 10, name: "Basilikum", desc: "Frisches Basilikum, 1 Bund", price: 1.80, emoji: "🌿", category: "Salat & Kräuter" },
+    { id: 11, name: "Kartoffeln", desc: "Festkochende Kartoffeln, 1kg", price: 2.00, emoji: "🥔", category: "Wurzelgemüse" },
+    { id: 12, name: "Rote Beete", desc: "Frische Rote Beete, 500g", price: 2.50, emoji: "🫚", category: "Wurzelgemüse" },
+    { id: 13, name: "Zwiebeln", desc: "Gelbe Zwiebeln, 1kg", price: 1.80, emoji: "🧅", category: "Wurzelgemüse" },
+    { id: 14, name: "Knoblauch", desc: "Frischer Knoblauch, 3 Köpfe", price: 1.50, emoji: "🧄", category: "Wurzelgemüse" },
   ];
 
   // ─── CURRENCY SYMBOL ────────────────────────────────────────────────────────
-  const CURRENCY = "ETB"; // Change to your currency
+  const CURRENCY = "CHF";
 
   // ─── YOUR BOT BACKEND URL ────────────────────────────────────────────────────
   // After setting up bot.js, replace this with your deployed URL:
@@ -480,6 +485,14 @@
 
   const tg = window.Telegram?.WebApp;
   if (tg) { tg.ready(); tg.expand(); }
+
+  // ── Keep server awake & pre-warm on page load ─────────────
+  // Pings the server immediately so it's ready when customer enters code
+  fetch(BOT_BACKEND_URL.replace("/order", "/"), { method: "GET" }).catch(() => {});
+  // Keep pinging every 10 minutes to prevent sleep
+  setInterval(() => {
+    fetch(BOT_BACKEND_URL.replace("/order", "/"), { method: "GET" }).catch(() => {});
+  }, 10 * 60 * 1000);
 
   // ── Lock screen logic ──────────────────────────────────────
   document.getElementById("unlockBtn").addEventListener("click", checkAccessCode);

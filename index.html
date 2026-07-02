@@ -364,19 +364,6 @@
 
   <!-- LOCK SCREEN -->
   <style>
-    @keyframes unlockPulse {
-      0% { transform: scale(1); }
-      50% { transform: scale(1.15); }
-      100% { transform: scale(1); }
-    }
-    @keyframes slideUp {
-      from { opacity: 1; transform: translateY(0); }
-      to { opacity: 0; transform: translateY(-40px); }
-    }
-    @keyframes particleFade {
-      0% { opacity: 1; transform: translateY(0) scale(1); }
-      100% { opacity: 0; transform: translateY(-80px) scale(0.3); }
-    }
     @keyframes shake {
       0%, 100% { transform: translateX(0); }
       20% { transform: translateX(-8px); }
@@ -384,25 +371,45 @@
       60% { transform: translateX(-6px); }
       80% { transform: translateX(6px); }
     }
-    @keyframes glowPulse {
-      0%, 100% { box-shadow: 0 0 0px #e8c97e; }
-      50% { box-shadow: 0 0 30px #e8c97e88; }
-    }
-    .unlock-success {
-      animation: unlockPulse 0.4s ease, glowPulse 0.6s ease 0.2s !important;
-    }
     .shake-error {
       animation: shake 0.4s ease !important;
-    }
-    .particle {
-      position: absolute;
-      font-size: 22px;
-      pointer-events: none;
-      animation: particleFade 0.9s ease forwards;
     }
     #codeInput:focus {
       border-color: #e8c97e !important;
       box-shadow: 0 0 12px #e8c97e44;
+    }
+    /* MATRIX CANVAS */
+    #matrixCanvas {
+      position: fixed;
+      inset: 0;
+      z-index: 600;
+      display: none;
+      background: #000;
+    }
+    /* SHATTER TILES */
+    .shatter-tile {
+      position: fixed;
+      background: #000;
+      border: 1px solid #0f03;
+      z-index: 700;
+      transition: transform 1s cubic-bezier(0.5, 0, 1, 1), opacity 1s ease;
+      pointer-events: none;
+    }
+    @keyframes glitchFlash {
+      0%, 100% { opacity: 0; }
+      10% { opacity: 1; }
+      20% { opacity: 0; }
+      30% { opacity: 0.8; }
+      40% { opacity: 0; }
+    }
+    #glitchFlash {
+      position: fixed;
+      inset: 0;
+      background: #0f0;
+      z-index: 650;
+      display: none;
+      pointer-events: none;
+      mix-blend-mode: screen;
     }
   </style>
 
@@ -414,6 +421,9 @@
     <button id="unlockBtn" style="background:#e8c97e;color:#000;border:none;border-radius:14px;padding:15px 40px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;cursor:pointer;letter-spacing:1px;transition:transform 0.15s,background 0.2s;">🔓 ENTSPERREN</button>
     <div id="lockError" style="color:#e07070;font-size:13px;margin-top:16px;display:none;"></div>
   </div>
+
+  <canvas id="matrixCanvas"></canvas>
+  <div id="glitchFlash"></div>
 
   <!-- HEADER -->
   <div class="header">
@@ -500,21 +510,94 @@
     if (e.key === "Enter") checkAccessCode();
   });
 
-  function spawnParticles() {
-    const emojis = ["✨", "🎉", "⭐", "🌟", "💫", "🛍️"];
-    const lock = document.getElementById("lockScreen");
-    for (let i = 0; i < 12; i++) {
-      setTimeout(() => {
-        const p = document.createElement("div");
-        p.className = "particle";
-        p.textContent = emojis[Math.floor(Math.random() * emojis.length)];
-        p.style.left = (20 + Math.random() * 60) + "%";
-        p.style.top = (30 + Math.random() * 40) + "%";
-        p.style.animationDuration = (0.6 + Math.random() * 0.5) + "s";
-        lock.appendChild(p);
-        setTimeout(() => p.remove(), 1200);
-      }, i * 60);
+  // ═══ MATRIX UNLOCK ANIMATION ═══
+  function startMatrixSequence() {
+    const canvas = document.getElementById("matrixCanvas");
+    const ctx = canvas.getContext("2d");
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    canvas.style.display = "block";
+
+    const chars = "アイウエオカキクケコ0123456789ABCDEFXYZ$#@%&";
+    const fontSize = 16;
+    const columns = Math.floor(canvas.width / fontSize);
+    const drops = Array(columns).fill(1);
+
+    let matrixRunning = true;
+
+    function drawMatrix() {
+      if (!matrixRunning) return;
+      ctx.fillStyle = "rgba(0, 0, 0, 0.08)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = "#0f0";
+      ctx.font = fontSize + "px monospace";
+      for (let i = 0; i < drops.length; i++) {
+        const char = chars[Math.floor(Math.random() * chars.length)];
+        ctx.fillText(char, i * fontSize, drops[i] * fontSize);
+        if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) drops[i] = 0;
+        drops[i]++;
+      }
+      requestAnimationFrame(drawMatrix);
     }
+    drawMatrix();
+
+    // Show "ZUGRIFF GEWÄHRT" text in the middle after 1.2s
+    setTimeout(() => {
+      ctx.save();
+    }, 1200);
+
+    // After 2 seconds: glitch flash + shatter
+    setTimeout(() => {
+      const flash = document.getElementById("glitchFlash");
+      flash.style.display = "block";
+      flash.style.animation = "glitchFlash 0.5s ease";
+
+      setTimeout(() => {
+        matrixRunning = false;
+        flash.style.display = "none";
+        shatterScreen(canvas);
+      }, 500);
+    }, 2000);
+  }
+
+  function shatterScreen(canvas) {
+    const lockScreen = document.getElementById("lockScreen");
+    const cols = 6, rows = 10;
+    const tileW = window.innerWidth / cols;
+    const tileH = window.innerHeight / rows;
+    const tiles = [];
+
+    // Create shatter tiles covering the screen
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const tile = document.createElement("div");
+        tile.className = "shatter-tile";
+        tile.style.width = tileW + "px";
+        tile.style.height = tileH + "px";
+        tile.style.left = (c * tileW) + "px";
+        tile.style.top = (r * tileH) + "px";
+        document.body.appendChild(tile);
+        tiles.push(tile);
+      }
+    }
+
+    // Hide canvas and lock screen behind tiles
+    canvas.style.display = "none";
+    lockScreen.style.display = "none";
+
+    // Fling tiles outward in all directions
+    setTimeout(() => {
+      tiles.forEach(tile => {
+        const angle = Math.random() * Math.PI * 2;
+        const dist = 400 + Math.random() * 800;
+        const x = Math.cos(angle) * dist;
+        const y = Math.sin(angle) * dist;
+        const rot = (Math.random() - 0.5) * 720;
+        tile.style.transform = `translate(${x}px, ${y}px) rotate(${rot}deg) scale(0.3)`;
+        tile.style.opacity = "0";
+      });
+      setTimeout(() => tiles.forEach(t => t.remove()), 1100);
+    }, 50);
   }
 
   async function checkAccessCode() {

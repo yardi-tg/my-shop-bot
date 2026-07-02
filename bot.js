@@ -132,9 +132,21 @@ app.post("/webhook", async (req, res) => {
           `🔑 <b>Today's access code:</b>\n\n<code>${getTodaysCode()}</code>\n\nShare this with customers you want to give shop access to today.`
         );
       } else {
-        await sendTelegramMessage(chatId,
-          `🔒 Please ask the shop owner for today's access code.`
-        );
+        // Send message with button to contact owner directly
+        const res = await fetch(`${TELEGRAM_API}/sendMessage`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: chatId,
+            text: `🔒 <b>Shop Access Required</b>\n\nThis shop is private. To get today's access code, contact the shop owner directly!`,
+            parse_mode: "HTML",
+            reply_markup: {
+              inline_keyboard: [[
+                { text: "💬 Contact Shop Owner", url: "https://t.me/Standonbu51ness?text=Hi!%20I'd%20like%20to%20access%20Yardi's%20Shop.%20Can%20I%20get%20today's%20code%3F%20🛍️" }
+              ]]
+            }
+          })
+        });
       }
     } else if (text === "/contact") {
       await sendTelegramMessage(

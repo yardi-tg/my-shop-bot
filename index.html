@@ -363,13 +363,56 @@
 <body>
 
   <!-- LOCK SCREEN -->
-  <div id="lockScreen" style="position:fixed;inset:0;background:#0f0f0f;z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;text-align:center;">
-    <div style="font-size:48px;margin-bottom:20px;">🔒</div>
-    <div style="font-family:'Playfair Display',serif;font-size:24px;color:#e8c97e;margin-bottom:10px;">Yardi's Shop</div>
-    <div style="color:#888;font-size:14px;margin-bottom:30px;">Enter today's access code to continue</div>
-    <input id="codeInput" type="text" inputmode="numeric" maxlength="4" placeholder="0000" style="background:#1a1a1a;border:1px solid #2e2e2e;color:#f0ece2;border-radius:12px;padding:14px 20px;font-size:24px;text-align:center;letter-spacing:8px;width:160px;outline:none;margin-bottom:16px;" />
-    <button id="unlockBtn" style="background:#e8c97e;color:#000;border:none;border-radius:12px;padding:14px 32px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;cursor:pointer;">Unlock Shop</button>
-    <div id="lockError" style="color:#e07070;font-size:13px;margin-top:14px;display:none;">Incorrect code, please try again.</div>
+  <style>
+    @keyframes unlockPulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.15); }
+      100% { transform: scale(1); }
+    }
+    @keyframes slideUp {
+      from { opacity: 1; transform: translateY(0); }
+      to { opacity: 0; transform: translateY(-40px); }
+    }
+    @keyframes particleFade {
+      0% { opacity: 1; transform: translateY(0) scale(1); }
+      100% { opacity: 0; transform: translateY(-80px) scale(0.3); }
+    }
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-8px); }
+      40% { transform: translateX(8px); }
+      60% { transform: translateX(-6px); }
+      80% { transform: translateX(6px); }
+    }
+    @keyframes glowPulse {
+      0%, 100% { box-shadow: 0 0 0px #e8c97e; }
+      50% { box-shadow: 0 0 30px #e8c97e88; }
+    }
+    .unlock-success {
+      animation: unlockPulse 0.4s ease, glowPulse 0.6s ease 0.2s !important;
+    }
+    .shake-error {
+      animation: shake 0.4s ease !important;
+    }
+    .particle {
+      position: absolute;
+      font-size: 22px;
+      pointer-events: none;
+      animation: particleFade 0.9s ease forwards;
+    }
+    #codeInput:focus {
+      border-color: #e8c97e !important;
+      box-shadow: 0 0 12px #e8c97e44;
+    }
+  </style>
+
+  <div id="lockScreen" style="position:fixed;inset:0;background:#0f0f0f;z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;text-align:center;transition:opacity 0.6s ease;">
+    <div id="lockIcon" style="font-size:56px;margin-bottom:20px;transition:all 0.3s;">🔒</div>
+    <div style="font-family:'Playfair Display',serif;font-size:26px;color:#e8c97e;margin-bottom:8px;">Yardi's Shop</div>
+    <div style="color:#888;font-size:13px;margin-bottom:32px;letter-spacing:1px;">ENTER ACCESS CODE</div>
+    <input id="codeInput" type="text" inputmode="numeric" maxlength="4" placeholder="••••" style="background:#1a1a1a;border:2px solid #2e2e2e;color:#e8c97e;border-radius:14px;padding:16px 20px;font-size:28px;text-align:center;letter-spacing:12px;width:170px;outline:none;margin-bottom:20px;transition:border-color 0.2s, box-shadow 0.2s;font-family:'DM Sans',sans-serif;" />
+    <button id="unlockBtn" style="background:#e8c97e;color:#000;border:none;border-radius:14px;padding:15px 40px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;cursor:pointer;letter-spacing:1px;transition:transform 0.15s,background 0.2s;">🔓 UNLOCK</button>
+    <div id="lockError" style="color:#e07070;font-size:13px;margin-top:16px;display:none;"></div>
   </div>
 
   <!-- HEADER -->
@@ -444,14 +487,42 @@
     if (e.key === "Enter") checkAccessCode();
   });
 
+  function spawnParticles() {
+    const emojis = ["✨", "🎉", "⭐", "🌟", "💫", "🛍️"];
+    const lock = document.getElementById("lockScreen");
+    for (let i = 0; i < 12; i++) {
+      setTimeout(() => {
+        const p = document.createElement("div");
+        p.className = "particle";
+        p.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+        p.style.left = (20 + Math.random() * 60) + "%";
+        p.style.top = (30 + Math.random() * 40) + "%";
+        p.style.animationDuration = (0.6 + Math.random() * 0.5) + "s";
+        lock.appendChild(p);
+        setTimeout(() => p.remove(), 1200);
+      }, i * 60);
+    }
+  }
+
   async function checkAccessCode() {
     const code = document.getElementById("codeInput").value.trim();
     const errorEl = document.getElementById("lockError");
+    const btn = document.getElementById("unlockBtn");
+    const lockIcon = document.getElementById("lockIcon");
+    const input = document.getElementById("codeInput");
+
     if (code.length !== 4) {
       errorEl.textContent = "Please enter the 4-digit code.";
       errorEl.style.display = "block";
+      input.classList.remove("shake-error");
+      void input.offsetWidth;
+      input.classList.add("shake-error");
       return;
     }
+
+    btn.textContent = "Checking...";
+    btn.disabled = true;
+
     try {
       const res = await fetch(BOT_BACKEND_URL.replace("/order", "/check-code"), {
         method: "POST",
@@ -459,13 +530,42 @@
         body: JSON.stringify({ code })
       });
       const data = await res.json();
+
       if (data.valid) {
-        document.getElementById("lockScreen").style.display = "none";
+        // Success animation!
+        lockIcon.textContent = "🔓";
+        lockIcon.classList.add("unlock-success");
+        input.style.borderColor = "#e8c97e";
+        input.style.boxShadow = "0 0 20px #e8c97e66";
+        btn.textContent = "✨ Welcome!";
+        btn.style.background = "#4caf50";
+        spawnParticles();
+
+        setTimeout(() => {
+          const lockScreen = document.getElementById("lockScreen");
+          lockScreen.style.opacity = "0";
+          lockScreen.style.transform = "scale(1.05)";
+          lockScreen.style.transition = "opacity 0.6s ease, transform 0.6s ease";
+          setTimeout(() => { lockScreen.style.display = "none"; }, 600);
+        }, 800);
+
       } else {
-        errorEl.textContent = "Incorrect code, please try again.";
+        // Error animation
+        btn.textContent = "🔓 UNLOCK";
+        btn.disabled = false;
+        errorEl.textContent = "❌ Wrong code! Ask the shop owner for today's code.";
         errorEl.style.display = "block";
+        input.style.borderColor = "#e07070";
+        input.value = "";
+        input.classList.remove("shake-error");
+        void input.offsetWidth;
+        input.classList.add("shake-error");
+        lockIcon.textContent = "🔒";
+        setTimeout(() => { input.style.borderColor = "#2e2e2e"; }, 1000);
       }
     } catch (e) {
+      btn.textContent = "🔓 UNLOCK";
+      btn.disabled = false;
       errorEl.textContent = "Connection error, please try again.";
       errorEl.style.display = "block";
     }

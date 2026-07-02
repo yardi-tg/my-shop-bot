@@ -6,7 +6,7 @@ app.use(cors());
 app.use(express.json());
 
 // ════════════════════════════════════════════════
-const BOT_TOKEN = "8234528536:AAFRTSt72MH-g1BzROc19dPss9QUdSjwGsM";
+const BOT_TOKEN = process.env.BOT_TOKEN;
 const YOUR_CHAT_ID = "8551836923";
 const SHOP_URL = "https://my-shop-bot.vercel.app";
 // ════════════════════════════════════════════════
@@ -26,14 +26,11 @@ async function sendTelegramMessage(chatId, text) {
 // ── Send order to owner WITH a Reply to Customer button ───────
 async function sendOrderToOwner(text, customerUserId, customerHandle) {
   const inline_keyboard = [];
-
-  // Button to open direct chat with customer
   if (customerHandle && customerHandle !== "No username") {
     inline_keyboard.push([{ text: "💬 Reply to Customer", url: `https://t.me/${customerHandle.replace("@", "")}` }]);
   } else if (customerUserId && customerUserId !== "N/A") {
     inline_keyboard.push([{ text: "💬 Reply to Customer", url: `tg://user?id=${customerUserId}` }]);
   }
-
   const res = await fetch(`${TELEGRAM_API}/sendMessage`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -67,9 +64,8 @@ async function sendWithShopButton(chatId, text, buttonLabel) {
 }
 
 // ── Daily access code generator ───────────────────────────────
-// Generates a new 4-digit code every day automatically, based on today's date
 function getTodaysCode() {
-  const today = new Date().toISOString().slice(0, 10); // e.g. "2026-06-27"
+  const today = new Date().toISOString().slice(0, 10);
   let hash = 0;
   for (let i = 0; i < today.length; i++) {
     hash = (hash * 31 + today.charCodeAt(i)) % 10000;
@@ -99,21 +95,16 @@ app.post("/webhook", async (req, res) => {
     const text = message.text || "";
     const firstName = message.from?.first_name || "there";
 
-    // Handle order sent via tg.sendData() from Mini App
     if (update.message?.web_app_data) {
       const orderText = update.message.web_app_data.data;
       const firstName = update.message.from?.first_name || "A customer";
       const handle = update.message.from?.username ? `@${update.message.from.username}` : "no username";
       const userId = update.message.from?.id;
-
-      // Forward the order to YOU with a reply button
       await sendOrderToOwner(
         `🛍️ <b>New Order!</b>\n👤 <b>${firstName}</b> (${handle})\n\n${orderText}`,
         userId,
         handle
       );
-
-      // Confirm to the customer
       await sendTelegramMessage(chatId,
         `✅ <b>Order received!</b>\n\nThanks ${firstName}! We got your order and will get back to you shortly. 🙏`
       );
@@ -137,9 +128,13 @@ app.post("/webhook", async (req, res) => {
       );
     } else if (text === "/code") {
       if (String(chatId) === String(YOUR_CHAT_ID)) {
-        await sendTelegramMessage(chatId, `🔑 <b>Today's access code:</b>\n\n<code>${getTodaysCode()}</code>\n\nShare this with customers you want to give shop access to today.`);
+        await sendTelegramMessage(chatId,
+          `🔑 <b>Today's access code:</b>\n\n<code>${getTodaysCode()}</code>\n\nShare this with customers you want to give shop access to today.`
+        );
       } else {
-        await sendTelegramMessage(chatId, `🔒 Please ask the shop owner for today's access code.`);
+        await sendTelegramMessage(chatId,
+          `🔒 Please ask the shop owner for today's access code.`
+        );
       }
     } else if (text === "/contact") {
       await sendTelegramMessage(
@@ -152,6 +147,7 @@ app.post("/webhook", async (req, res) => {
         `😊 Hey ${firstName}! Use these commands:\n\n` +
         `/start — Welcome & open shop\n` +
         `/menu — Browse our menu\n` +
+        `/code — Get today's access code\n` +
         `/contact — Get in touch\n\n` +
         `Or just tap the button below:`,
         "🛍️ Open Shop"
@@ -165,21 +161,18 @@ app.post("/webhook", async (req, res) => {
   }
 });
 
-// ── /order endpoint — called by the Mini App ─────────────────
+// ── /order endpoint ───────────────────────────────────────────
 app.post("/order", async (req, res) => {
   try {
     const order = req.body;
-
     if (!order.items || order.items.length === 0) {
       return res.status(400).json({ error: "Empty order" });
     }
-
     const { user, items, total, currency, note } = order;
     const itemLines = items
       .map((i) => `  • ${i.qty}x ${i.name}  —  ${currency} ${i.qty * i.price}`)
       .join("\n");
     const noteSection = note ? `\n📝 <b>Note:</b> ${note}` : "";
-
     const ownerMsg =
       `🛍️ <b>New Order!</b>\n\n` +
       `👤 <b>Customer:</b> ${user.name} (${user.handle})\n` +
@@ -188,11 +181,7 @@ app.post("/order", async (req, res) => {
       `💰 <b>Total:</b> ${currency} ${total}` +
       noteSection +
       `\n\n⏰ ${new Date().toLocaleString()}`;
-
-    // Send order to owner with reply button
     await sendOrderToOwner(ownerMsg, user.id, user.handle);
-
-    // Send confirmation to customer
     if (order.user?.id && order.user.id !== "N/A") {
       await sendWithShopButton(
         order.user.id,
@@ -200,7 +189,6 @@ app.post("/order", async (req, res) => {
         "🛍️ Order Again"
       );
     }
-
     res.json({ success: true });
   } catch (err) {
     console.error("Order error:", err);

@@ -628,26 +628,19 @@
       const data = await res.json();
 
       if (data.valid) {
-        // Success animation!
+        // ═══ EPIC MATRIX UNLOCK ═══
         lockIcon.textContent = "🔓";
-        lockIcon.classList.add("unlock-success");
-        input.style.borderColor = "#e8c97e";
-        input.style.boxShadow = "0 0 20px #e8c97e66";
-        btn.textContent = "✨ Welcome!";
-        btn.style.background = "#4caf50";
-        spawnParticles();
-
-        setTimeout(() => {
-          const lockScreen = document.getElementById("lockScreen");
-          lockScreen.style.opacity = "0";
-          lockScreen.style.transform = "scale(1.05)";
-          lockScreen.style.transition = "opacity 0.6s ease, transform 0.6s ease";
-          setTimeout(() => { lockScreen.style.display = "none"; }, 600);
-        }, 800);
+        input.style.borderColor = "#0f0";
+        input.style.boxShadow = "0 0 20px #0f06";
+        btn.textContent = "ACCESS GRANTED";
+        btn.style.background = "#0f0";
+        btn.style.color = "#000";
+        btn.style.fontFamily = "monospace";
+        startMatrixSequence();
 
       } else {
         // Error animation
-        btn.textContent = "🔓 UNLOCK";
+        btn.textContent = "🔓 ENTSPERREN";
         btn.disabled = false;
         errorEl.textContent = "❌ Falscher Code! Frage den Shopinhaber nach dem heutigen Code.";
         errorEl.style.display = "block";
@@ -660,9 +653,9 @@
         setTimeout(() => { input.style.borderColor = "#2e2e2e"; }, 1000);
       }
     } catch (e) {
-      btn.textContent = "🔓 UNLOCK";
+      btn.textContent = "🔓 ENTSPERREN";
       btn.disabled = false;
-      errorEl.textContent = "Verbindungsfehler, bitte erneut versuchen.";
+      errorEl.textContent = "⏳ Server wacht auf... Bitte warte 30 Sekunden und versuche es erneut!";
       errorEl.style.display = "block";
     }
   }

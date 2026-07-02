@@ -114,7 +114,7 @@ app.post("/webhook", async (req, res) => {
     if (text === "/start") {
       await sendWithShopButton(
         chatId,
-        `👋 <b>Willkommen bei Yardi's Shop, ${firstName}!</b>\n\n` +
+        `👋 <b>Willkommen bei Blocktheke, ${firstName}!</b>\n\n` +
         `🍉 Frische Früchte & leckere Snacks, bereit für dich!\n\n` +
         `Stöbere durch unser Menü, wähle deine Lieblingsprodukte und bestelle in Sekunden. 😍\n\n` +
         `👇 Tippe unten, um den Shop zu öffnen:`,
@@ -142,7 +142,7 @@ app.post("/webhook", async (req, res) => {
             parse_mode: "HTML",
             reply_markup: {
               inline_keyboard: [[
-                { text: "💬 Shopinhaber kontaktieren", url: "https://t.me/Standonbu51ness?text=Hallo!%20Ich%20möchte%20gerne%20auf%20Yardi's%20Shop%20zugreifen.%20Kann%20ich%20den%20heutigen%20Code%20bekommen%3F%20🛍️" }
+                { text: "💬 Shopinhaber kontaktieren", url: "https://t.me/Standonbu51ness?text=Hallo!%20Ich%20möchte%20gerne%20auf%20Blocktheke%20zugreifen.%20Kann%20ich%20den%20heutigen%20Code%20bekommen%3F%20🛍️" }
               ]]
             }
           })

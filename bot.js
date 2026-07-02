@@ -115,8 +115,9 @@ app.post("/webhook", async (req, res) => {
       await sendWithShopButton(
         chatId,
         `👋 <b>Willkommen bei Blocktheke, ${firstName}!</b>\n\n` +
-        `🍉 Frische Früchte & leckere Snacks, bereit für dich!\n\n` +
-        `Stöbere durch unser Menü, wähle deine Lieblingsprodukte und bestelle in Sekunden. 😍\n\n` +
+        `🥦 Frisches Gemüse in Top-Qualität, bereit für dich!\n\n` +
+        `Stöbere durch unser Sortiment, wähle deine Favoriten und bestelle in Sekunden. 😍\n\n` +
+        `🔑 Schreibe <b>/code</b>, um den heutigen Zugangscode zu erhalten.\n\n` +
         `👇 Tippe unten, um den Shop zu öffnen:`,
         "🛍️ Shop öffnen"
       );

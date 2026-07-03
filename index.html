@@ -628,10 +628,13 @@
         shard.style.cssText = `
           position:absolute;
           left:${c*cellW}px; top:${r*cellH}px;
-          width:${cellW+1}px; height:${cellH+1}px;
+          width:${cellW-4}px; height:${cellH-4}px;
+          margin:2px;
           background-image:url(${snapshot});
           background-position:-${c*cellW}px -${r*cellH}px;
           background-size:${w}px ${h}px;
+          border-radius:10px;
+          box-shadow: 0 6px 18px rgba(0,0,0,0.55), 0 0 12px rgba(0,255,0,0.15), inset 0 0 8px rgba(0,255,0,0.1);
           transition: transform 2s cubic-bezier(0.25,0.1,0.25,1), opacity 2s ease;
           will-change: transform, opacity;
         `;

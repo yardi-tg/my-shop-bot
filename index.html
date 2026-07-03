@@ -779,7 +779,7 @@
           <div class="product-name">${p.name}</div>
           <div class="product-desc">${p.desc}</div>
           <div class="product-footer">
-            <div class="product-price">${CURRENCY} ${p.price}</div>
+            <div class="product-price">${CURRENCY} ${p.price.toFixed(2)}</div>
             <button class="add-btn" id="addbtn-${p.id}" onclick="addToCart(${p.id})">+</button>
           </div>
         </div>`;
@@ -848,7 +848,7 @@
         <div class="cart-item-emoji">${p.emoji}</div>
         <div class="cart-item-info">
           <div class="cart-item-name">${p.name}</div>
-          <div class="cart-item-price">${CURRENCY} ${subtotal}</div>
+          <div class="cart-item-price">${CURRENCY} ${subtotal.toFixed(2)}</div>
         </div>
         <div class="qty-controls">
           <button class="qty-btn" onclick="changeQty(${p.id}, -1)">−</button>
@@ -858,7 +858,7 @@
       </div>`;
     }).join("");
 
-    document.getElementById("cartTotal").textContent = `${CURRENCY} ${total}`;
+    document.getElementById("cartTotal").textContent = `${CURRENCY} ${total.toFixed(2)}`;
     footer.style.display = "block";
   }
 
@@ -889,18 +889,18 @@
     const note = document.getElementById("orderNote").value.trim();
 
     // Build the pre-written message the customer sends to YOU
-    const itemLines = items.map(i => `- ${i.qty}x ${i.name} — ${CURRENCY} ${i.qty * i.price}`).join("%0A");
-    const noteSection = note ? `%0A📝 Note: ${note}` : "";
+    const itemLines = items.map(i => `- ${i.qty}x ${i.name} — ${CURRENCY} ${(i.qty * i.price).toFixed(2)}`).join("\n");
+    const noteSection = note ? `\n📝 Notiz: ${note}` : "";
     const orderText =
-      `Ich möchte gerne bestellen.%0A` +
-      `${itemLines}%0A` +
-      `💰 Total: ${CURRENCY} ${total}` +
+      `Ich möchte gerne bestellen.\n` +
+      `${itemLines}\n` +
+      `💰 Total: ${CURRENCY} ${total.toFixed(2)}` +
       noteSection;
 
     // Open YOUR personal Telegram chat with the order already typed
     // Customer just taps Send!
     const ownerUsername = "Standonbu51ness";
-    const deepLink = `https://t.me/${ownerUsername}?text=${orderText}`;
+    const deepLink = `https://t.me/${ownerUsername}?text=${encodeURIComponent(orderText)}`;
 
     if (tg) {
       tg.openTelegramLink(deepLink);

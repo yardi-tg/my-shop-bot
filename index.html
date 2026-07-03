@@ -605,63 +605,60 @@
 
   function shatterScreen(canvas) {
     const lockScreen = document.getElementById("lockScreen");
+    const w = window.innerWidth, h = window.innerHeight;
 
-    // Snapshot the matrix canvas as the image we'll shatter
+    // Snapshot the matrix as the image we'll shatter
     const snapshot = canvas.toDataURL();
     lockScreen.style.display = "none";
 
-    // Create many triangular glass shards using clip-path for a realistic break
-    const cols = 9, rows = 16;
-    const w = window.innerWidth, h = window.innerHeight;
+    // Detect mobile → fewer shards for smooth performance
+    const isMobile = w < 600;
+    const cols = isMobile ? 5 : 8;
+    const rows = isMobile ? 9 : 13;
     const cellW = w / cols, cellH = h / rows;
-    const shards = [];
+
     const container = document.createElement("div");
     container.style.cssText = "position:fixed;inset:0;z-index:700;pointer-events:none;overflow:hidden;";
     document.body.appendChild(container);
 
+    const shards = [];
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
-        // Two triangles per cell for a jagged glass look
-        for (let t = 0; t < 2; t++) {
-          const shard = document.createElement("div");
-          const clip = t === 0
-            ? "polygon(0 0, 100% 0, 0 100%)"
-            : "polygon(100% 0, 100% 100%, 0 100%)";
-          shard.style.cssText = `
-            position:absolute;
-            left:${c*cellW}px; top:${r*cellH}px;
-            width:${cellW}px; height:${cellH}px;
-            background-image:url(${snapshot});
-            background-position:-${c*cellW}px -${r*cellH}px;
-            background-size:${w}px ${h}px;
-            clip-path:${clip};
-            -webkit-clip-path:${clip};
-            transition: transform 1.1s cubic-bezier(0.3,0.1,0.2,1), opacity 1.1s ease;
-            will-change: transform, opacity;
-          `;
-          container.appendChild(shard);
-          shards.push({ el: shard, cx: c*cellW + cellW/2, cy: r*cellH + cellH/2 });
-        }
+        const shard = document.createElement("div");
+        shard.style.cssText = `
+          position:absolute;
+          left:${c*cellW}px; top:${r*cellH}px;
+          width:${cellW+1}px; height:${cellH+1}px;
+          background-image:url(${snapshot});
+          background-position:-${c*cellW}px -${r*cellH}px;
+          background-size:${w}px ${h}px;
+          transition: transform 2s cubic-bezier(0.25,0.1,0.25,1), opacity 2s ease;
+          will-change: transform, opacity;
+        `;
+        container.appendChild(shard);
+        shards.push({ el: shard, cx: c*cellW + cellW/2, cy: r*cellH + cellH/2 });
       }
     }
 
     canvas.style.display = "none";
 
-    // Explode shards outward from center with gravity + spin
-    const centerX = w / 2, centerY = h / 2;
+    // Wait 2 frames so the browser paints all shards FIRST (prevents the freeze/stutter)
     requestAnimationFrame(() => {
-      shards.forEach(s => {
-        const dx = s.cx - centerX;
-        const dy = s.cy - centerY;
-        const dist = Math.sqrt(dx*dx + dy*dy) || 1;
-        const force = 1.2 + Math.random() * 1.3;
-        const x = (dx / dist) * dist * force + (Math.random()-0.5)*100;
-        const y = (dy / dist) * dist * force + 300 + Math.random()*200; // gravity pull down
-        const rot = (Math.random() - 0.5) * 540;
-        s.el.style.transform = `translate(${x}px, ${y}px) rotate(${rot}deg) scale(0.4)`;
-        s.el.style.opacity = "0";
+      requestAnimationFrame(() => {
+        const centerX = w / 2, centerY = h / 2;
+        shards.forEach(s => {
+          const dx = s.cx - centerX;
+          const dy = s.cy - centerY;
+          const dist = Math.sqrt(dx*dx + dy*dy) || 1;
+          const force = 1.3 + Math.random() * 1.0;
+          const x = (dx / dist) * dist * force + (Math.random()-0.5)*60;
+          const y = (dy / dist) * dist * force + 250 + Math.random()*150;
+          const rot = (Math.random() - 0.5) * 400;
+          s.el.style.transform = `translate(${x}px, ${y}px) rotate(${rot}deg) scale(0.5)`;
+          s.el.style.opacity = "0";
+        });
+        setTimeout(() => { container.remove(); }, 2100);
       });
-      setTimeout(() => { container.remove(); }, 1200);
     });
 
     // Header welcome pop
@@ -672,10 +669,10 @@
         header.style.transform = "scale(1.15)";
         setTimeout(() => { header.style.transform = "scale(1)"; }, 500);
       }
-    }, 300);
+    }, 400);
   }
 
-  async function checkAccessCode() {
+    async function checkAccessCode() {
     const code = document.getElementById("codeInput").value.trim();
     const errorEl = document.getElementById("lockError");
     const btn = document.getElementById("unlockBtn");

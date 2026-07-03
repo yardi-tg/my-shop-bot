@@ -598,20 +598,17 @@
 
     // After 2 seconds: shatter
     setTimeout(() => {
-      matrixRunning = false;
-      shatterScreen(canvas);
+      // Keep the rain running! Just snapshot the LIVE canvas and shatter that.
+      // The real canvas keeps raining underneath while shards fly off.
+      shatterScreen(canvas, () => { matrixRunning = false; });
     }, 2000);
   }
 
-  function shatterScreen(canvas) {
+  function shatterScreen(canvas, stopRainCallback) {
     const lockScreen = document.getElementById("lockScreen");
     const w = window.innerWidth, h = window.innerHeight;
-
-    // Snapshot the matrix as the image we'll shatter
-    const snapshot = canvas.toDataURL();
     lockScreen.style.display = "none";
 
-    // Detect mobile → fewer shards for smooth performance
     const isMobile = w < 600;
     const cols = isMobile ? 5 : 8;
     const rows = isMobile ? 9 : 13;
@@ -620,6 +617,9 @@
     const container = document.createElement("div");
     container.style.cssText = "position:fixed;inset:0;z-index:700;pointer-events:none;overflow:hidden;";
     document.body.appendChild(container);
+
+    // Take a snapshot of the LIVE raining canvas right now
+    const snapshot = canvas.toDataURL();
 
     const shards = [];
     for (let r = 0; r < rows; r++) {
@@ -643,9 +643,9 @@
       }
     }
 
-    canvas.style.display = "none";
+    // The canvas keeps raining UNDERNEATH the shards (z-index lower than container)
+    // so the numbers keep falling in the gaps as the shards fly away.
 
-    // Wait 2 frames so the browser paints all shards FIRST (prevents the freeze/stutter)
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         const centerX = w / 2, centerY = h / 2;
@@ -660,7 +660,19 @@
           s.el.style.transform = `translate(${x}px, ${y}px) rotate(${rot}deg) scale(0.5)`;
           s.el.style.opacity = "0";
         });
-        setTimeout(() => { container.remove(); }, 2100);
+
+        // Fade the live rain canvas out together with the shards near the end
+        setTimeout(() => {
+          canvas.style.transition = "opacity 0.8s ease";
+          canvas.style.opacity = "0";
+        }, 1200);
+
+        setTimeout(() => {
+          container.remove();
+          if (stopRainCallback) stopRainCallback(); // NOW stop the rain loop
+          canvas.style.display = "none";
+          canvas.style.opacity = "1";
+        }, 2100);
       });
     });
 

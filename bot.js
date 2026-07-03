@@ -149,7 +149,7 @@ app.post("/webhook", async (req, res) => {
             parse_mode: "HTML",
             reply_markup: {
               inline_keyboard: [[
-                { text: "💬 Shopinhaber kontaktieren", url: "https://t.me/Standonbu51ness?text=Hallo!%20Ich%20möchte%20gerne%20auf%20Blocktheke%20zugreifen.%20Kann%20ich%20den%20heutigen%20Code%20bekommen%3F%20🛍️" }
+                { text: "💬 Shopinhaber kontaktieren", url: "https://t.me/Standonbu51ness?text=" + encodeURIComponent("Hallo! Ich möchte gerne auf Blocktheke zugreifen. Kann ich den heutigen Code bekommen? 🛍️") }
               ]]
             }
           })

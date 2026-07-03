@@ -478,6 +478,17 @@
   <!-- CATEGORIES -->
   <div class="categories" id="categories"></div>
 
+  <!-- LAST ORDER BANNER -->
+  <div id="lastOrderBanner" style="display:none; margin:8px 20px 4px; background:linear-gradient(135deg,#242424,#1a1a1a); border:1px solid var(--accent); border-radius:16px; padding:14px 16px; cursor:pointer; transition:transform 0.15s;">
+    <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+      <div style="flex:1; min-width:0;">
+        <div style="font-size:12px; color:var(--accent); font-weight:600; margin-bottom:3px;">🔄 DEINE LETZTE BESTELLUNG</div>
+        <div id="lastOrderSummary" style="font-size:12px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></div>
+      </div>
+      <div style="background:var(--accent); color:#000; font-weight:700; font-size:13px; padding:8px 16px; border-radius:50px; white-space:nowrap;">Wiederholen</div>
+    </div>
+  </div>
+
   <!-- PRODUCTS -->
   <div id="productSections"></div>
 
@@ -789,6 +800,52 @@
     sectionsEl.appendChild(section);
   });
 
+  // ═══ LAST ORDER FEATURE ═══
+  // Uses Telegram CloudStorage (syncs across devices), falls back to in-memory
+  let lastOrderCache = null;
+
+  function loadLastOrder() {
+    if (tg?.CloudStorage) {
+      tg.CloudStorage.getItem("lastOrder", (err, value) => {
+        if (!err && value) {
+          try { showLastOrderBanner(JSON.parse(value)); } catch(e) {}
+        }
+      });
+    } else if (lastOrderCache) {
+      showLastOrderBanner(lastOrderCache);
+    }
+  }
+
+  function saveLastOrder(items) {
+    const data = JSON.stringify(items);
+    lastOrderCache = items;
+    if (tg?.CloudStorage) {
+      tg.CloudStorage.setItem("lastOrder", data, () => {});
+    }
+  }
+
+  function showLastOrderBanner(items) {
+    if (!items || items.length === 0) return;
+    const banner = document.getElementById("lastOrderBanner");
+    const summary = items.map(i => `${i.qty}x ${i.name}`).join(", ");
+    document.getElementById("lastOrderSummary").textContent = summary;
+    banner.style.display = "block";
+    banner.onclick = () => {
+      // Refill the cart with the last order
+      cart = {};
+      items.forEach(i => { cart[i.id] = i.qty; });
+      // Update all product card buttons
+      items.forEach(i => {
+        const btn = document.getElementById(`addbtn-${i.id}`);
+        if (btn) { btn.classList.add("in-cart"); btn.textContent = i.qty; }
+      });
+      updateCartUI();
+      openCart();
+    };
+  }
+
+  loadLastOrder();
+
   function addToCart(id) {
     cart[id] = (cart[id] || 0) + 1;
     updateCartUI();
@@ -882,8 +939,11 @@
 
     const items = cartKeys.map(id => {
       const p = PRODUCTS.find(p => p.id == id);
-      return { name: p.name, qty: cart[id], price: p.price };
+      return { id: Number(id), name: p.name, qty: cart[id], price: p.price };
     });
+
+    // Save this order so the customer can repeat it next time
+    saveLastOrder(items);
 
     const total = items.reduce((sum, i) => sum + i.qty * i.price, 0);
     const note = document.getElementById("orderNote").value.trim();

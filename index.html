@@ -52,66 +52,106 @@
     }
     .cart-badge.show { display: flex; }
 
-    /* PRODUCT LIST */
-    .products { padding: 16px; display: flex; flex-direction: column; gap: 16px; }
+    /* PRODUCT GRID (square tiles, 2 per row) */
+    .products { padding: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 
-    .product-card {
+    .product-tile {
+      position: relative;
       background: linear-gradient(145deg, var(--surface2), var(--surface));
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      padding: 16px;
+      padding: 16px 14px 14px;
+      aspect-ratio: 1 / 1;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      text-align: center; cursor: pointer;
       animation: fadeUp 0.4s ease both;
+      transition: transform 0.15s, border-color 0.15s;
     }
+    .product-tile:active { transform: scale(0.97); border-color: var(--accent); }
     @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
 
-    .pc-top { display: flex; gap: 14px; margin-bottom: 14px; }
-    .pc-emoji {
-      width: 60px; height: 60px; border-radius: 12px;
-      background: var(--surface); border: 1px solid var(--border);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 32px; flex-shrink: 0;
-    }
-    .pc-info { flex: 1; min-width: 0; }
-    .pc-name { font-size: 16px; font-weight: 600; color: var(--text); line-height: 1.3; margin-bottom: 4px; }
-    .pc-sub { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
-    .pc-badges { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-    .stars { font-size: 13px; color: var(--star); letter-spacing: 1px; }
-    .stars .rt { color: var(--muted); font-size: 11px; margin-left: 3px; }
+    .pt-emoji { font-size: 46px; margin-bottom: 10px; line-height: 1; }
+    .pt-name { font-size: 15px; font-weight: 600; color: var(--text); line-height: 1.25; margin-bottom: 6px; }
+    .pt-stars { font-size: 13px; color: var(--star); letter-spacing: 1px; margin-bottom: 8px; }
+    .pt-stars .rt { color: var(--muted); font-size: 11px; margin-left: 3px; }
     .badge-import {
-      font-size: 10px; font-weight: 700; letter-spacing: 0.5px;
+      font-size: 9px; font-weight: 700; letter-spacing: 0.5px;
       background: rgba(232,201,126,0.14); color: var(--accent);
       padding: 3px 8px; border-radius: 6px; text-transform: uppercase;
     }
+    .pt-arrow {
+      position: absolute; top: 12px; right: 12px;
+      color: var(--muted); font-size: 14px;
+    }
 
-    /* VARIANT OPTIONS */
-    .variants { display: flex; flex-direction: column; gap: 8px; }
+    /* FULL PRODUCT PAGE (overlay) */
+    .product-page {
+      position: fixed; inset: 0; z-index: 300;
+      background: var(--bg);
+      transform: translateX(100%);
+      transition: transform 0.3s cubic-bezier(0.32,0.72,0,1);
+      overflow-y: auto;
+      padding-bottom: 40px;
+    }
+    .product-page.open { transform: translateX(0); }
+    .pp-header {
+      position: sticky; top: 0; z-index: 5;
+      background: rgba(15,15,15,0.92); backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 16px; display: flex; align-items: center; gap: 12px;
+    }
+    .pp-back {
+      background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+      width: 38px; height: 38px; border-radius: 50%; font-size: 20px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .pp-htitle { font-size: 16px; font-weight: 600; color: var(--text); }
+    .pp-hero {
+      display: flex; flex-direction: column; align-items: center; text-align: center;
+      padding: 28px 20px 20px;
+    }
+    .pp-emoji {
+      width: 100px; height: 100px; border-radius: 20px;
+      background: var(--surface2); border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 56px; margin-bottom: 16px;
+    }
+    .pp-name { font-family: 'Playfair Display', serif; font-size: 24px; color: var(--text); margin-bottom: 6px; }
+    .pp-sub { font-size: 13px; color: var(--muted); margin-bottom: 12px; }
+    .pp-badges { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center; }
+    .pp-stars { font-size: 15px; color: var(--star); letter-spacing: 1px; }
+    .pp-stars .rt { color: var(--muted); font-size: 12px; margin-left: 3px; }
+
+    .pp-variants { padding: 8px 16px; display: flex; flex-direction: column; gap: 10px; }
+    .pp-vlabel { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin: 8px 4px 2px; }
+
     .variant {
       display: flex; align-items: center; justify-content: space-between;
       background: var(--surface); border: 1px solid var(--border);
-      border-radius: 11px; padding: 11px 13px; gap: 10px;
+      border-radius: 12px; padding: 14px 15px; gap: 10px;
     }
     .variant.req { border-style: dashed; }
-    .v-left { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-    .v-qty { font-size: 14px; font-weight: 600; color: var(--text); }
-    .v-price { font-size: 13px; font-weight: 600; color: var(--accent); }
+    .v-left { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+    .v-qty { font-size: 16px; font-weight: 600; color: var(--text); }
+    .v-price { font-size: 14px; font-weight: 600; color: var(--accent); }
     .v-price.req { color: var(--muted); font-style: italic; font-weight: 500; }
     .v-unit { font-size: 11px; color: var(--muted); font-weight: 400; }
 
     .v-add {
-      background: var(--accent); color: #000; border: none; border-radius: 9px;
-      padding: 8px 14px; font-family: 'DM Sans', sans-serif; font-size: 13px;
-      font-weight: 700; cursor: pointer; flex-shrink: 0; transition: transform 0.1s, background 0.15s;
+      background: var(--accent); color: #000; border: none; border-radius: 10px;
+      padding: 10px 16px; font-family: 'DM Sans', sans-serif; font-size: 13px;
+      font-weight: 700; cursor: pointer; flex-shrink: 0; transition: transform 0.1s;
     }
     .v-add:active { transform: scale(0.9); }
-    .v-stepper { display: none; align-items: center; gap: 10px; flex-shrink: 0; }
+    .v-stepper { display: none; align-items: center; gap: 12px; flex-shrink: 0; }
     .v-stepper.active { display: flex; }
     .v-sbtn {
       background: var(--surface2); border: 1px solid var(--accent); color: var(--accent);
-      width: 28px; height: 28px; border-radius: 50%; font-size: 17px; font-weight: 700;
+      width: 30px; height: 30px; border-radius: 50%; font-size: 18px; font-weight: 700;
       cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1;
     }
     .v-sbtn.plus { background: var(--accent); color: #000; border-color: var(--accent); }
-    .v-snum { font-size: 14px; font-weight: 700; color: var(--accent); min-width: 20px; text-align: center; }
+    .v-snum { font-size: 15px; font-weight: 700; color: var(--accent); min-width: 20px; text-align: center; }
 
     /* CART DRAWER */
     .drawer-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 200; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
@@ -192,8 +232,17 @@
     <button class="cart-btn" onclick="openCart()">🛒 Warenkorb <span class="cart-badge" id="cartBadge">0</span></button>
   </div>
 
-  <!-- PRODUCTS -->
+  <!-- PRODUCTS (grid of tiles) -->
   <div class="products" id="productList"></div>
+
+  <!-- FULL PRODUCT PAGE (overlay) -->
+  <div class="product-page" id="productPage">
+    <div class="pp-header">
+      <button class="pp-back" onclick="closeProduct()">←</button>
+      <div class="pp-htitle" id="ppTitle"></div>
+    </div>
+    <div id="ppBody"></div>
+  </div>
 
   <!-- FLOATING CART BAR -->
   <div id="floatingCart" onclick="openCart()">
@@ -433,9 +482,23 @@
     return out;
   }
 
-  // ═══ RENDER PRODUCTS ═══
+  // ═══ RENDER PRODUCT TILES ═══
   const listEl = document.getElementById("productList");
   listEl.innerHTML = PRODUCTS.map(p => {
+    const badge = p.import ? `<span class="badge-import">USA Import</span>` : "";
+    return `<div class="product-tile" onclick="openProduct(${p.id})">
+      <div class="pt-arrow">›</div>
+      <div class="pt-emoji">${p.emoji}</div>
+      <div class="pt-name">${p.name}</div>
+      <div class="pt-stars">${starRow(p.stars)}<span class="rt">${p.stars.toFixed(1)}</span></div>
+      ${badge}
+    </div>`;
+  }).join("");
+
+  // ═══ OPEN / CLOSE FULL PRODUCT PAGE ═══
+  function openProduct(id) {
+    const p = PRODUCTS.find(x => x.id === id);
+    if (!p) return;
     const badge = p.import ? `<span class="badge-import">USA Import</span>` : "";
     const variantsHtml = p.variants.map(v => {
       const isReq = v.price === 0;
@@ -452,21 +515,26 @@
         </div>
       </div>`;
     }).join("");
-    return `<div class="product-card">
-      <div class="pc-top">
-        <div class="pc-emoji">${p.emoji}</div>
-        <div class="pc-info">
-          <div class="pc-name">${p.name}</div>
-          <div class="pc-sub">${p.strain}</div>
-          <div class="pc-badges">
-            <span class="stars">${starRow(p.stars)}<span class="rt">${p.stars.toFixed(1)}</span></span>
-            ${badge}
-          </div>
+    document.getElementById("ppTitle").textContent = p.name;
+    document.getElementById("ppBody").innerHTML = `
+      <div class="pp-hero">
+        <div class="pp-emoji">${p.emoji}</div>
+        <div class="pp-name">${p.name}</div>
+        <div class="pp-sub">${p.strain}</div>
+        <div class="pp-badges">
+          <span class="pp-stars">${starRow(p.stars)}<span class="rt">${p.stars.toFixed(1)}</span></span>
+          ${badge}
         </div>
       </div>
-      <div class="variants">${variantsHtml}</div>
-    </div>`;
-  }).join("");
+      <div class="pp-vlabel">Menge wählen</div>
+      <div class="pp-variants">${variantsHtml}</div>`;
+    document.getElementById("productPage").classList.add("open");
+    // restore any existing cart quantities on the variant steppers
+    p.variants.forEach(v => refreshVariant(v.key));
+  }
+  function closeProduct() {
+    document.getElementById("productPage").classList.remove("open");
+  }
 
   // ═══ CART LOGIC ═══
   function addVariant(key) {
@@ -482,6 +550,7 @@
     const addBtn = document.getElementById(`add-${key}`);
     const step = document.getElementById(`step-${key}`);
     const num = document.getElementById(`num-${key}`);
+    if (!addBtn || !step) return; // product page not open
     const qty = cart[key] || 0;
     if (qty > 0) { addBtn.style.display = "none"; step.classList.add("active"); if (num) num.textContent = qty; }
     else { addBtn.style.display = "block"; step.classList.remove("active"); }

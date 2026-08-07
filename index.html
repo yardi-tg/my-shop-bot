@@ -76,11 +76,12 @@
       background: var(--surface); border: 1px solid var(--border);
       display: flex; align-items: center; justify-content: center; flex-shrink: 0;
     }
-    .pt-name { font-size: 15px; font-weight: 700; color: var(--text); line-height: 1.25; margin-bottom: 6px; }
-    .pt-desc { font-size: 11.5px; color: var(--muted); line-height: 1.4; margin-bottom: 10px; flex: 1; }
-    .pt-stars { font-size: 13px; color: var(--star); letter-spacing: 1px; margin-bottom: 8px; }
-    .pt-stars .rt { color: var(--muted); font-size: 11px; margin-left: 3px; }
-    .pt-from { font-size: 12px; font-weight: 700; color: var(--accent); margin-bottom: 8px; }
+    .pt-name { font-size: 18px; font-weight: 700; color: var(--text); line-height: 1.15; margin-bottom: 3px; letter-spacing:-0.2px; }
+    .pt-strain { font-size: 13px; font-weight: 600; color: var(--accent2); line-height: 1.2; margin-bottom: 7px; }
+    .pt-desc { font-size: 11px; color: var(--muted); line-height: 1.4; margin-bottom: 10px; flex: 1; }
+    .pt-stars { display:flex; align-items:center; justify-content:center; gap:6px; margin-bottom: 8px; }
+    .pt-stars .rt { color: var(--muted); font-size: 12px; font-weight:600; }
+    .pt-from { font-size: 13px; font-weight: 700; color: var(--accent); margin-bottom: 8px; }
     .badge-import {
       font-size: 9px; font-weight: 700; letter-spacing: 0.5px;
       background: rgba(232,201,126,0.14); color: var(--accent);
@@ -126,8 +127,9 @@
     .pp-name { font-family: 'Playfair Display', serif; font-size: 24px; color: var(--text); margin-bottom: 6px; }
     .pp-sub { font-size: 13px; color: var(--muted); margin-bottom: 12px; }
     .pp-badges { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center; }
-    .pp-stars { font-size: 15px; color: var(--star); letter-spacing: 1px; }
-    .pp-stars .rt { color: var(--muted); font-size: 12px; margin-left: 3px; }
+    .pp-stars { display:inline-flex; align-items:center; gap:6px; }
+    .pp-stars .rt { color: var(--muted); font-size: 13px; font-weight:600; }
+    .pp-note { margin: 8px 16px 0; padding: 12px 14px; background: rgba(232,201,126,0.08); border:1px solid var(--border); border-radius:12px; font-size:13px; color:var(--accent); text-align:center; }
 
     .pp-variants { padding: 8px 16px; display: flex; flex-direction: column; gap: 10px; }
     .pp-vlabel { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin: 8px 4px 2px; }
@@ -283,8 +285,10 @@
     {
       id: 1,
       name: "OG Exotics",
-      strain: "Wizard Trees · Cali USA Import",
-      desc: "Premium Cali-Import Flower von Wizard Trees. Exotische Genetik, Top-Qualität.",
+      big: "Wizard",
+      strain: "Cali USA Import · Wizard Trees",
+      desc: "Premium Cali-Import. Strains: M8 & Black Magic — Auswahl im Chat.",
+      strainNote: "M8 oder Black Magic (im Chat wählen)",
       emoji: "🌳",
       stars: 4.5,
       import: true,
@@ -312,8 +316,9 @@
     {
       id: 3,
       name: "Fresh Frozen Sift",
-      strain: "Hash Burger",
-      desc: "Fresh Frozen Sift Hash, Sorte Hash Burger. Vollaromatisch, Premium-Qualität.",
+      big: "Hash Burger",
+      strain: "Sorte: Hash Burger",
+      desc: "Fresh Frozen Sift Hash. Vollaromatisch, Premium-Qualität.",
       emoji: "🍔",
       stars: 5,
       import: false,
@@ -330,8 +335,9 @@
     {
       id: 4,
       name: "Double Static Sift",
-      strain: "Forbidden Fruit",
-      desc: "Double Static Sift Hash, Sorte Forbidden Fruit. Sauber gesiebt, aromatisch.",
+      big: "Forbidden Fruit",
+      strain: "Sorte: Forbidden Fruit",
+      desc: "Double Static Sift Hash. Sauber gesiebt, aromatisch.",
       emoji: "🍇",
       stars: 4.2,
       import: false,
@@ -479,17 +485,20 @@
     }
   }
 
-  // ═══ STAR RENDER ═══
-  function starRow(s) {
-    const full = Math.floor(s);
-    const half = (s - full) >= 0.5;
-    let out = "";
+  // ═══ STAR RENDER (precise per-star partial fill via SVG) ═══
+  function starRow(s, size) {
+    size = size || 15;
+    const starPath = "M12 2l2.9 6.26L21.5 9l-5 4.6 1.4 6.9L12 17.3 6.1 20.5l1.4-6.9-5-4.6 6.6-.74z";
+    let defs = "", stars = "";
     for (let i=0;i<5;i++){
-      if (i < full) out += "★";
-      else if (i === full && half) out += "⯨";
-      else out += "☆";
+      // fill fraction for THIS star: full if s>=i+1, partial if between, empty otherwise
+      let frac = Math.max(0, Math.min(1, s - i)); // e.g. s=4.2 -> star5 gets 0.2
+      const pct = (frac*100).toFixed(1);
+      const gid = "sg" + Math.random().toString(36).slice(2,8) + i;
+      defs += `<linearGradient id="${gid}"><stop offset="${pct}%" stop-color="var(--star)"/><stop offset="${pct}%" stop-color="transparent"/></linearGradient>`;
+      stars += `<path d="${starPath}" transform="translate(${i*22},0)" fill="url(#${gid})" stroke="var(--star)" stroke-width="1.2"/>`;
     }
-    return out;
+    return `<svg viewBox="0 0 112 24" width="${(size*5.0).toFixed(0)}" height="${(size*1.05).toFixed(0)}" style="vertical-align:middle"><defs>${defs}</defs>${stars}</svg>`;
   }
 
   // ═══ RENDER PRODUCT TILES ═══
@@ -499,12 +508,14 @@
     // lowest real price for "ab CHF X"
     const prices = p.variants.filter(v => v.price > 0).map(v => v.price);
     const fromHtml = prices.length ? `<div class="pt-from">ab ${CURRENCY} ${Math.min(...prices).toFixed(2)}</div>` : "";
+    const bigLine = p.big ? `<div class="pt-strain">${p.big}</div>` : "";
     return `<div class="product-tile" onclick="openProduct(${p.id})">
       <div class="pt-arrow">›</div>
       <div class="pt-emoji">${p.emoji}</div>
       <div class="pt-name">${p.name}</div>
+      ${bigLine}
       <div class="pt-desc">${p.desc || p.strain}</div>
-      <div class="pt-stars">${starRow(p.stars)}<span class="rt">${p.stars.toFixed(1)}</span></div>
+      <div class="pt-stars">${starRow(p.stars, 13)}<span class="rt">${p.stars.toFixed(1)}</span></div>
       ${fromHtml}
       ${badge}
     </div>`;
@@ -531,16 +542,18 @@
       </div>`;
     }).join("");
     document.getElementById("ppTitle").textContent = p.name;
+    const noteHtml = p.strainNote ? `<div class="pp-note">📋 ${p.strainNote}</div>` : "";
     document.getElementById("ppBody").innerHTML = `
       <div class="pp-hero">
         <div class="pp-emoji">${p.emoji}</div>
-        <div class="pp-name">${p.name}</div>
+        <div class="pp-name">${p.name}${p.big ? ` · ${p.big}` : ""}</div>
         <div class="pp-sub">${p.strain}</div>
         <div class="pp-badges">
-          <span class="pp-stars">${starRow(p.stars)}<span class="rt">${p.stars.toFixed(1)}</span></span>
+          <span class="pp-stars">${starRow(p.stars, 16)}<span class="rt">${p.stars.toFixed(1)}</span></span>
           ${badge}
         </div>
       </div>
+      ${noteHtml}
       <div class="pp-vlabel">Menge wählen</div>
       <div class="pp-variants">${variantsHtml}</div>`;
     document.getElementById("productPage").classList.add("open");
@@ -647,9 +660,11 @@
     if (keys.length === 0) return;
 
     let lines = [], total = 0, hasReq = false;
+    const strainProducts = new Set();
     keys.forEach(key => {
       const { product, variant } = findVariant(key);
       const qty = cart[key];
+      if (product.strainNote) strainProducts.add(product.name + " → " + product.strainNote);
       if (variant.price === 0) {
         hasReq = true;
         lines.push(`- ${qty}x ${product.name} · ${variant.label} — ANFRAGE (Preis auf Anfrage)`);
@@ -663,6 +678,10 @@
 
     const note = document.getElementById("orderNote").value.trim();
     let msg = `Ich möchte gerne bestellen.\n${lines.join("\n")}\n💰 Total: ${CURRENCY} ${total.toFixed(2)}`;
+    if (strainProducts.size > 0) {
+      msg += `\n\n🌿 Bitte Sorte angeben:`;
+      strainProducts.forEach(s => { msg += `\n• ${s}`; });
+    }
     if (hasReq) msg += `\n📩 Enthält Anfrage-Artikel — bitte Preis bestätigen.`;
     if (note) msg += `\n📝 Notiz: ${note}`;
 

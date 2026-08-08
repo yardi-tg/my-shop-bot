@@ -142,17 +142,14 @@
       width: 240px; height: 240px; object-fit: cover; border-radius: 16px;
       border: 1px solid var(--border); flex-shrink: 0; scroll-snap-align: center;
     }
-    .pp-gallery-hint { font-size: 11px; color: var(--muted); margin-bottom: 14px; }
+    .pp-gallery-hint { font-size: 14px; font-weight:600; color: var(--accent); margin-bottom: 16px; }
     .pp-name { font-family: 'Playfair Display', serif; font-size: 24px; color: var(--text); margin-bottom: 6px; }
     .pp-sub { font-size: 13px; color: var(--muted); margin-bottom: 12px; }
     .pp-badges { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center; }
     .pp-stars { display:inline-flex; align-items:center; gap:6px; }
     .pp-stars .rt { color: var(--muted); font-size: 13px; font-weight:600; }
     .pp-note { margin: 8px 16px 0; padding: 12px 14px; background: rgba(232,201,126,0.08); border:1px solid var(--border); border-radius:12px; font-size:13px; color:var(--accent); text-align:center; }
-    .pp-flavors { padding: 4px 16px 8px; display:flex; flex-direction:column; gap:7px; }
-    .flavor-row { display:flex; align-items:center; gap:12px; background:var(--surface); border:1px solid var(--border); border-radius:11px; padding:11px 13px; }
-    .flavor-num { flex-shrink:0; width:24px; height:24px; border-radius:50%; background:var(--accent); color:#000; font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center; }
-    .flavor-name { font-size:14px; font-weight:600; color:var(--text); }
+    .pp-flavors-text { padding: 4px 16px 12px; font-size:14px; line-height:1.9; color:var(--text); }
 
     .pp-variants { padding: 8px 16px; display: flex; flex-direction: column; gap: 10px; }
     .pp-vlabel { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin: 8px 4px 2px; }
@@ -605,8 +602,8 @@
     let flavorsHtml = "";
     if (p.flavors && p.flavors.length) {
       flavorsHtml = `<div class="pp-vlabel">Verfügbare Sorten</div>
-        <div class="pp-flavors">` +
-        p.flavors.map((f,i) => `<div class="flavor-row"><span class="flavor-num">${i+1}</span><span class="flavor-name">${f}</span></div>`).join("") +
+        <div class="pp-flavors-text">` +
+        p.flavors.map(f => `(${f})`).join(", ") +
         `</div>`;
     }
     let heroMedia;

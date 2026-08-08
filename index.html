@@ -150,6 +150,17 @@
     .pp-stars .rt { color: var(--muted); font-size: 13px; font-weight:600; }
     .pp-note { margin: 8px 16px 0; padding: 12px 14px; background: rgba(232,201,126,0.08); border:1px solid var(--border); border-radius:12px; font-size:13px; color:var(--accent); text-align:center; }
     .pp-flavors-text { padding: 4px 16px 12px; font-size:14px; line-height:1.9; color:var(--text); }
+    .pp-menge-toggle {
+      margin: 10px 16px; padding: 16px 18px;
+      background: linear-gradient(145deg, var(--surface2), var(--surface));
+      border: 1px solid var(--accent); border-radius: 14px;
+      display: flex; align-items: center; justify-content: space-between;
+      font-size: 16px; font-weight: 700; color: var(--accent); cursor: pointer;
+      transition: transform 0.1s, background 0.15s;
+    }
+    .pp-menge-toggle:active { transform: scale(0.98); }
+    .pp-menge-toggle.open { border-radius: 14px 14px 0 0; margin-bottom: 0; }
+    .pp-menge-arrow { font-size: 14px; }
 
     .pp-variants { padding: 8px 16px 20px; }
     .pp-variants .variant-box { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
@@ -323,10 +334,10 @@
       id: 2,
       name: "Whole Melt",
       big: "THC Vapes",
-      big2: "(10 Sorten · je 2 Flavours)",
+      big2: "(20 Flavours · je 2 pro Vape)",
       strain: "Dual Chamber · USA Import",
-      desc: "10 Sorten, je 2 Flavours — Auswahl im privat Chat.",
-      strainNote: "10 Sorten · je 2 Flavours (im privat Chat wählen)",
+      desc: "20 Flavours, je 2 pro Vape — Auswahl im privat Chat.",
+      strainNote: "20 Flavours je 2 pro Vape (im privat Chat wählen)",
       photos: [
         "https://raw.githubusercontent.com/yardi-tg/my-shop-bot/main/vape1.jpg",
         "https://raw.githubusercontent.com/yardi-tg/my-shop-bot/main/vape2.jpg",
@@ -605,7 +616,7 @@
     if (p.flavors && p.flavors.length) {
       flavorsHtml = `<div class="pp-vlabel">Verfügbare Sorten</div>
         <div class="pp-flavors-text">` +
-        p.flavors.map(f => `• (${f})`).join(" ") +
+        p.flavors.map(f => `• ${f}`).join("  ") +
         `</div>`;
     }
     let heroMedia;
@@ -628,14 +639,27 @@
       </div>
       ${noteHtml}
       ${flavorsHtml}
-      <div class="pp-vlabel">Menge wählen</div>
-      <div class="pp-variants"><div class="variant-box">${variantsHtml}</div></div>`;
+      <div class="pp-menge-toggle" id="mengeToggle" onclick="toggleMenge()">
+        <span>Menge wählen</span>
+        <span class="pp-menge-arrow" id="mengeArrow">▾</span>
+      </div>
+      <div class="pp-variants" id="ppVariants" style="display:none"><div class="variant-box">${variantsHtml}</div></div>`;
     document.getElementById("productPage").classList.add("open");
     // restore any existing cart quantities on the variant steppers
     p.variants.forEach(v => refreshVariant(v.key));
   }
   function closeProduct() {
     document.getElementById("productPage").classList.remove("open");
+  }
+  function toggleMenge() {
+    const v = document.getElementById("ppVariants");
+    const a = document.getElementById("mengeArrow");
+    const t = document.getElementById("mengeToggle");
+    if (v.style.display === "none") {
+      v.style.display = "block"; a.textContent = "▴"; t.classList.add("open");
+    } else {
+      v.style.display = "none"; a.textContent = "▾"; t.classList.remove("open");
+    }
   }
 
   // ═══ CART LOGIC ═══

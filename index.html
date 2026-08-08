@@ -83,8 +83,8 @@
       background: var(--surface);
     }
     .pt-collage img { width: 100%; height: 100%; object-fit: cover; }
-    .pt-collage-v4 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
-    .pt-collage-v4 video { width: 100%; height: 100%; object-fit: cover; pointer-events: none; background:#000; }
+    .pt-collage-v4 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 2px; }
+    .pt-collage-v4 video { width: 100%; height: 100%; object-fit: cover; object-position: center; pointer-events: none; background:#000; display:block; }
     .pt-name { font-size: 18px; font-weight: 700; color: var(--text); line-height: 1.15; margin-bottom: 3px; letter-spacing:-0.2px; }
     .pt-strain { font-size: 13px; font-weight: 600; color: var(--accent); line-height: 1.2; margin-bottom: 2px; }
     .pt-strain2 { font-size: 13px; font-weight: 600; color: var(--accent); line-height: 1.25; margin-bottom: 7px; }
@@ -157,12 +157,14 @@
       background: #000; display: block;
     }
     .pp-gvid {
-      height: 300px; width: auto; max-width: 92vw; border-radius: 16px;
-      border: 1px solid var(--border); flex-shrink: 0; scroll-snap-align: center;
-      background: #000; display: block; object-fit: contain; cursor: pointer;
+      height: 68vh; max-height: 560px; width: auto; max-width: 90vw;
+      border-radius: 18px; border: 1px solid var(--border);
+      flex-shrink: 0; scroll-snap-align: center;
+      background: #000; display: block; object-fit: cover; cursor: pointer;
     }
     .pp-gvid::-webkit-media-controls { display: none !important; }
     .pp-gvid::-webkit-media-controls-enclosure { display: none !important; }
+    .pp-gallery { padding-left: 5vw; padding-right: 5vw; gap: 14px; justify-content: flex-start; }
     .pp-gallery-hint { font-size: 14px; font-weight:600; color: var(--accent); margin-bottom: 16px; }
     .pp-name { font-family: 'Playfair Display', serif; font-size: 24px; color: var(--text); margin-bottom: 6px; }
     .pp-sub { font-size: 13px; color: var(--muted); margin-bottom: 12px; }
@@ -670,7 +672,7 @@
     }
     let heroMedia;
     const media = [];
-    if (p.videos) p.videos.forEach(v => media.push(`<video src="${v}" class="pp-gvid" autoplay loop muted playsinline preload="auto" onclick="toggleVid(this)"></video>`));
+    if (p.videos) p.videos.forEach(v => media.push(`<video src="${v}#t=0.1" class="pp-gvid" loop muted playsinline preload="metadata" onclick="toggleVid(this)"></video>`));
     if (p.photos) p.photos.forEach(src => media.push(`<img src="${src}" class="pp-gimg" onerror="this.style.display='none'">`));
     if (media.length) {
       const hint = (p.videos ? "← wischen für mehr Videos →" : "← wischen für mehr Bilder →");
@@ -698,9 +700,38 @@
     document.getElementById("productPage").classList.add("open");
     // restore any existing cart quantities on the variant steppers
     p.variants.forEach(v => refreshVariant(v.key));
+    // set up video autoplay-on-visible (only the >60% visible video plays)
+    setupVideoObserver();
   }
   function closeProduct() {
     document.getElementById("productPage").classList.remove("open");
+    if (videoObserver) { videoObserver.disconnect(); videoObserver = null; }
+    document.querySelectorAll(".pp-gvid").forEach(v => v.pause());
+  }
+  let videoObserver = null;
+  function setupVideoObserver() {
+    const vids = document.querySelectorAll(".pp-gvid");
+    if (!vids.length) return;
+    if (videoObserver) videoObserver.disconnect();
+    videoObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        const v = entry.target;
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.6) {
+          // pause all others first, then play this one
+          document.querySelectorAll(".pp-gvid").forEach(o => { if (o !== v) o.pause(); });
+          const pr = v.play();
+          if (pr && pr.catch) pr.catch(()=>{});
+        } else {
+          v.pause();
+        }
+      });
+    }, { threshold: [0, 0.6, 1] });
+    vids.forEach(v => videoObserver.observe(v));
+    // kick the first video so it shows immediately (autoplay first frame)
+    setTimeout(() => {
+      const first = vids[0];
+      if (first) { const pr = first.play(); if (pr && pr.catch) pr.catch(()=>{}); }
+    }, 100);
   }
   function toggleVid(v) {
     if (v.paused) v.play(); else v.pause();

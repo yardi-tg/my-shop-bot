@@ -83,6 +83,9 @@
       background: var(--surface);
     }
     .pt-collage img { width: 100%; height: 100%; object-fit: cover; }
+    .pt-collage-v { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
+    .pt-collage-v video { width: 100%; height: 100%; object-fit: cover; pointer-events: none; background:#000; }
+    .pt-collage-v video:first-child { grid-row: span 2; }
     .pt-name { font-size: 18px; font-weight: 700; color: var(--text); line-height: 1.15; margin-bottom: 3px; letter-spacing:-0.2px; }
     .pt-strain { font-size: 13px; font-weight: 600; color: var(--accent); line-height: 1.2; margin-bottom: 2px; }
     .pt-strain2 { font-size: 13px; font-weight: 600; color: var(--accent); line-height: 1.25; margin-bottom: 7px; }
@@ -114,14 +117,25 @@
       position: sticky; top: 0; z-index: 5;
       background: rgba(15,15,15,0.92); backdrop-filter: blur(16px);
       border-bottom: 1px solid var(--border);
-      padding: 14px 16px; display: flex; align-items: center; gap: 12px;
+      padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 10px;
     }
-    .pp-back {
-      background: var(--surface2); border: 1px solid var(--border); color: var(--text);
-      width: 38px; height: 38px; border-radius: 50%; font-size: 20px; cursor: pointer;
-      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    .pp-back-text {
+      background: none; border: none; color: var(--accent);
+      font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 600; cursor: pointer;
+      padding: 6px 4px; flex-shrink: 0;
     }
-    .pp-htitle { font-size: 16px; font-weight: 600; color: var(--text); }
+    .pp-htitle { font-size: 15px; font-weight: 600; color: var(--text); text-align: center; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .pp-cart-btn {
+      position: relative; background: var(--surface2); border: 1px solid var(--border);
+      color: var(--text); border-radius: 50px; padding: 7px 12px; font-size: 16px; cursor: pointer;
+      flex-shrink: 0; display: flex; align-items: center;
+    }
+    .pp-cart-badge {
+      background: var(--accent); color: #000; font-size: 10px; font-weight: 700;
+      border-radius: 50%; min-width: 16px; height: 16px; padding: 0 4px;
+      display: none; align-items: center; justify-content: center; margin-left: 4px;
+    }
+    .pp-cart-badge.show { display: inline-flex; }
     .pp-hero {
       display: flex; flex-direction: column; align-items: center; text-align: center;
       padding: 28px 20px 20px;
@@ -141,7 +155,9 @@
     .pp-gimg {
       width: 240px; height: 240px; object-fit: cover; border-radius: 16px;
       border: 1px solid var(--border); flex-shrink: 0; scroll-snap-align: center;
+      background: #000; display: block;
     }
+    video.pp-gimg { object-fit: contain; }
     .pp-gallery-hint { font-size: 14px; font-weight:600; color: var(--accent); margin-bottom: 16px; }
     .pp-name { font-family: 'Playfair Display', serif; font-size: 24px; color: var(--text); margin-bottom: 6px; }
     .pp-sub { font-size: 13px; color: var(--muted); margin-bottom: 12px; }
@@ -149,7 +165,7 @@
     .pp-stars { display:inline-flex; align-items:center; gap:6px; }
     .pp-stars .rt { color: var(--muted); font-size: 13px; font-weight:600; }
     .pp-note { margin: 8px 16px 0; padding: 12px 14px; background: rgba(232,201,126,0.08); border:1px solid var(--border); border-radius:12px; font-size:13px; color:var(--accent); text-align:center; }
-    .pp-flavors-text { padding: 4px 16px 12px; font-size:14px; line-height:1.9; color:var(--accent); font-weight:600; }
+    .pp-flavors-text { padding: 4px 16px 12px; font-size:14px; line-height:1.9; color:var(--text); font-weight:500; }
     .pp-menge-toggle {
       margin: 10px 16px; padding: 16px 18px;
       background: linear-gradient(145deg, var(--surface2), var(--surface));
@@ -196,12 +212,12 @@
     .v-snum { font-size: 15px; font-weight: 700; color: var(--accent); min-width: 20px; text-align: center; }
 
     /* CART DRAWER */
-    .drawer-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 200; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+    .drawer-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 400; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
     .drawer-overlay.open { opacity: 1; pointer-events: all; }
     .drawer {
       position: fixed; bottom: 0; left: 0; right: 0;
       background: var(--surface); border-top: 1px solid var(--border);
-      border-radius: 24px 24px 0 0; z-index: 201; padding: 20px 20px 40px;
+      border-radius: 24px 24px 0 0; z-index: 401; padding: 20px 20px 40px;
       max-height: 85vh; overflow-y: auto;
       transform: translateY(100%); transition: transform 0.35s cubic-bezier(0.32,0.72,0,1);
     }
@@ -280,8 +296,9 @@
   <!-- FULL PRODUCT PAGE (overlay) -->
   <div class="product-page" id="productPage">
     <div class="pp-header">
-      <button class="pp-back" onclick="closeProduct()">←</button>
+      <button class="pp-back-text" onclick="closeProduct()">Zurück</button>
       <div class="pp-htitle" id="ppTitle"></div>
+      <button class="pp-cart-btn" onclick="openCart()">🛒<span class="pp-cart-badge" id="ppCartBadge">0</span></button>
     </div>
     <div id="ppBody"></div>
   </div>
@@ -335,6 +352,7 @@
       name: "Whole Melt",
       big: "THC Vapes",
       big2: "(20 Flavours · je 2 pro Vape)",
+      fromPrice: 120,
       strain: "Dual Chamber · USA Import",
       desc: "20 Flavours, je 2 pro Vape — Auswahl im privat Chat.",
       strainNote: "20 Flavours je 2 pro Vape (im privat Chat wählen)",
@@ -373,8 +391,13 @@
       id: 3,
       name: "Fresh Frozen",
       big: "Hash Burger",
-      strain: "Fresh Frozen Sift",
+      strain: "Secret Farm · Fresh Frozen Sift",
       desc: "Fresh Frozen Sift Hash. Vollaromatisch, Premium-Qualität.",
+      videos: [
+        "https://raw.githubusercontent.com/yardi-tg/my-shop-bot/main/fresh1.mp4",
+        "https://raw.githubusercontent.com/yardi-tg/my-shop-bot/main/fresh2.mp4",
+        "https://raw.githubusercontent.com/yardi-tg/my-shop-bot/main/fresh3.mp4",
+      ],
       emoji: "🍔",
       stars: 5,
       import: false,
@@ -392,7 +415,7 @@
       id: 4,
       name: "Double Static",
       big: "Forbidden Fruit",
-      strain: "Double Static Sift",
+      strain: "Secret Farm · Double Static Sift",
       desc: "Double Static Sift Hash. Sauber gesiebt, aromatisch.",
       emoji: "🍇",
       stars: 4.2,
@@ -563,11 +586,19 @@
     const badge = p.import ? `<span class="badge-import">USA Import</span>` : "";
     // lowest real price for "ab CHF X"
     const prices = p.variants.filter(v => v.price > 0).map(v => v.price);
-    const fromHtml = prices.length ? `<div class="pt-from">ab ${CURRENCY} ${Math.min(...prices).toFixed(2)}</div>` : "";
+    const fromVal = p.fromPrice || (prices.length ? Math.min(...prices) : 0);
+    const fromHtml = fromVal ? `<div class="pt-from">ab ${CURRENCY} ${fromVal.toFixed(2)}</div>` : "";
     const bigLine = p.big ? `<div class="pt-strain">${p.big}</div>` : "";
     const big2Line = p.big2 ? `<div class="pt-strain2">${p.big2}</div>` : "";
     let emojiCell;
-    if (p.photos && p.photos.length >= 4) {
+    if (p.videos && p.videos.length >= 3) {
+      // frozen video preview collage (first frame, not playing)
+      emojiCell = `<div class="pt-collage pt-collage-v">
+        <video src="${p.videos[0]}#t=0.1" muted playsinline preload="metadata"></video>
+        <video src="${p.videos[1]}#t=0.1" muted playsinline preload="metadata"></video>
+        <video src="${p.videos[2]}#t=0.1" muted playsinline preload="metadata"></video>
+      </div>`;
+    } else if (p.photos && p.photos.length >= 4) {
       emojiCell = `<div class="pt-collage">
         <img src="${p.photos[0]}" onerror="this.style.display='none'">
         <img src="${p.photos[1]}" onerror="this.style.display='none'">
@@ -610,7 +641,7 @@
         </div>
       </div>`;
     }).join("");
-    document.getElementById("ppTitle").textContent = p.name;
+    document.getElementById("ppTitle").textContent = p.big || p.strain || p.name;
     const noteHtml = p.strainNote ? `<div class="pp-note">📋 ${p.strainNote}</div>` : "";
     let flavorsHtml = "";
     if (p.flavors && p.flavors.length) {
@@ -620,10 +651,12 @@
         `</div>`;
     }
     let heroMedia;
-    if (p.photos && p.photos.length) {
-      heroMedia = `<div class="pp-gallery">` +
-        p.photos.map(src => `<img src="${src}" class="pp-gimg" onerror="this.style.display='none'">`).join("") +
-        `</div><div class="pp-gallery-hint">← wischen für mehr Bilder →</div>`;
+    const media = [];
+    if (p.videos) p.videos.forEach(v => media.push(`<video src="${v}" class="pp-gimg" controls playsinline preload="metadata"></video>`));
+    if (p.photos) p.photos.forEach(src => media.push(`<img src="${src}" class="pp-gimg" onerror="this.style.display='none'">`));
+    if (media.length) {
+      const hint = (p.videos ? "← wischen für mehr Videos →" : "← wischen für mehr Bilder →");
+      heroMedia = `<div class="pp-gallery">` + media.join("") + `</div><div class="pp-gallery-hint">${hint}</div>`;
     } else {
       heroMedia = `<div class="pp-emoji">${p.emoji}</div>`;
     }
@@ -702,6 +735,9 @@
     document.getElementById("fcCount").textContent = count;
     document.getElementById("fcTotal").textContent = `${CURRENCY} ${total.toFixed(2)}`;
     fc.classList.toggle("show", count > 0);
+    // product page cart badge
+    const ppBadge = document.getElementById("ppCartBadge");
+    if (ppBadge) { ppBadge.textContent = count; ppBadge.classList.toggle("show", count > 0); }
   }
 
   function openCart() {

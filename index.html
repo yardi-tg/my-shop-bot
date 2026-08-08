@@ -149,7 +149,7 @@
     .pp-stars { display:inline-flex; align-items:center; gap:6px; }
     .pp-stars .rt { color: var(--muted); font-size: 13px; font-weight:600; }
     .pp-note { margin: 8px 16px 0; padding: 12px 14px; background: rgba(232,201,126,0.08); border:1px solid var(--border); border-radius:12px; font-size:13px; color:var(--accent); text-align:center; }
-    .pp-flavors-text { padding: 4px 16px 12px; font-size:14px; line-height:1.9; color:var(--text); }
+    .pp-flavors-text { padding: 4px 16px 12px; font-size:14px; line-height:1.9; color:var(--accent); font-weight:600; }
     .pp-menge-toggle {
       margin: 10px 16px; padding: 16px 18px;
       background: linear-gradient(145deg, var(--surface2), var(--surface));
@@ -616,7 +616,7 @@
     if (p.flavors && p.flavors.length) {
       flavorsHtml = `<div class="pp-vlabel">Verfügbare Sorten</div>
         <div class="pp-flavors-text">` +
-        p.flavors.map(f => `• ${f}`).join("  ") +
+        p.flavors.map(f => `• ${f}`).join(", ") +
         `</div>`;
     }
     let heroMedia;

@@ -5,7 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Blocktheke</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
     :root {
       --bg: #0f0f0f;
@@ -246,9 +248,17 @@
     }
     .pp-gvid {
       height: 48vh; max-height: 420px; width: auto; max-width: 78vw;
+      min-width: 60vw;
       border-radius: 18px; border: 1px solid var(--border);
       flex-shrink: 0; scroll-snap-align: center;
-      background: #000; display: block; object-fit: cover; cursor: pointer;
+      display: block; object-fit: cover; cursor: pointer;
+      background: linear-gradient(135deg, #1a1a1a 25%, #242424 50%, #1a1a1a 75%);
+      background-size: 400% 400%;
+      animation: vidShimmer 1.5s ease infinite;
+    }
+    @keyframes vidShimmer {
+      0% { background-position: 0% 50%; }
+      100% { background-position: 100% 50%; }
     }
     .pp-gvid::-webkit-media-controls { display: none !important; }
     .pp-gvid::-webkit-media-controls-enclosure { display: none !important; }
@@ -751,8 +761,8 @@
       // frozen video preview collage (first frame, not playing)
       const wideFrame = p.wideFrame || 0.1;
       emojiCell = `<div class="pt-collage pt-collage-v3">
-        <video src="${p.videos[0]}#t=0.1" muted playsinline preload="metadata"></video>
-        <video src="${p.videos[1]}#t=0.1" muted playsinline preload="metadata"></video>
+        <video src="${p.videos[0]}#t=0.5" muted playsinline preload="metadata"></video>
+        <video src="${p.videos[1]}#t=0.5" muted playsinline preload="metadata"></video>
         <video src="${p.videos[2]}#t=${wideFrame}" class="vid-wide" muted playsinline preload="metadata"></video>
       </div>`;
     } else if (p.photos && p.photos.length >= 4) {
@@ -843,7 +853,7 @@
     }
     let heroMedia;
     const media = [];
-    if (p.videos) p.videos.forEach(v => media.push(`<video src="${v}#t=0.1" class="pp-gvid" loop muted playsinline preload="auto" onclick="toggleVid(this)"></video>`));
+    if (p.videos) p.videos.forEach((v, i) => media.push(`<video src="${v}#t=0.1" class="pp-gvid" loop muted playsinline preload="${i === 0 ? 'auto' : 'metadata'}" onclick="toggleVid(this)"></video>`));
     if (p.photos) p.photos.forEach(src => media.push(`<img src="${src}" class="pp-gimg" onerror="this.style.display='none'">`));
     if (media.length) {
       const hint = (p.videos ? "← wischen für mehr Videos →" : "← wischen für mehr Bilder →");
@@ -915,24 +925,22 @@
     const vids = document.querySelectorAll(".pp-gvid");
     if (!vids.length) return;
     if (videoObserver) videoObserver.disconnect();
-    // PAUSE ALL immediately to avoid double-play on open
-    vids.forEach(v => {
-      v.pause();
-      // force-load so the first frame shows instead of black
-      try { v.load(); } catch(e){}
-      // nudge to the poster frame once metadata is ready
-      v.addEventListener("loadedmetadata", () => {
-        try { if (v.currentTime === 0) v.currentTime = 0.1; } catch(e){}
-      }, { once: true });
-    });
+    // Don't call load() (causes black re-flash). Just play the first one ASAP.
     const gal = document.querySelector(".pp-gallery");
-    // use scroll listener for precise "which is >60% visible" control
     if (gal) {
       gal.onscroll = () => { window.requestAnimationFrame(playOnlyVisible); };
     }
-    // initial: play only the first (fully visible) one after layout settles
-    setTimeout(playOnlyVisible, 120);
-    setTimeout(playOnlyVisible, 350);
+    // Play the first video immediately so it shows frames instead of black.
+    const first = vids[0];
+    if (first) {
+      const kick = () => { const pr = first.play(); if (pr && pr.catch) pr.catch(()=>{}); };
+      kick();
+      // if not ready yet, play as soon as it can
+      first.addEventListener("canplay", kick, { once: true });
+      first.addEventListener("loadeddata", kick, { once: true });
+    }
+    // ensure only the visible one keeps playing
+    setTimeout(playOnlyVisible, 200);
   }
   function toggleVid(v) {
     if (v.paused) v.play(); else v.pause();

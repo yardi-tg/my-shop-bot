@@ -700,8 +700,13 @@
     document.getElementById("productPage").classList.add("open");
     // restore any existing cart quantities on the variant steppers
     p.variants.forEach(v => refreshVariant(v.key));
+    // reset scroll positions: page to top, gallery to first video
+    const pp = document.getElementById("productPage");
+    pp.scrollTop = 0;
+    const gal = pp.querySelector(".pp-gallery");
+    if (gal) gal.scrollLeft = 0;
     // set up video autoplay-on-visible (only the >60% visible video plays)
-    setupVideoObserver();
+    setTimeout(() => setupVideoObserver(), 60);
   }
   function closeProduct() {
     document.getElementById("productPage").classList.remove("open");
@@ -742,6 +747,10 @@
     const t = document.getElementById("mengeToggle");
     if (v.style.display === "none") {
       v.style.display = "block"; a.textContent = "▴"; t.classList.add("open");
+      // smooth-scroll the toggle up so the variants list is nicely in view
+      setTimeout(() => {
+        t.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 80);
     } else {
       v.style.display = "none"; a.textContent = "▾"; t.classList.remove("open");
     }

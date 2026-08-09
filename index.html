@@ -722,6 +722,7 @@
     const p = PRODUCTS.find(x => x.id === id);
     if (!p) return;
     const badge = p.import ? `<div class="pt-import">🇺🇸 <span class="import-text">USA Import</span></div>` : "";
+    const farmBadge = p.farm ? `<div class="pt-farm">💎 <span class="pt-farm-text">${p.farm}</span></div>` : "";
     const variantsHtml = p.variants.map(v => {
       const isReq = v.price === 0;
       const priceHtml = isReq
@@ -772,6 +773,7 @@
         <div class="pp-badges">
           <span class="pp-stars">${starRow(p.stars, 16)}<span class="rt">${p.stars.toFixed(1)}</span></span>
           ${badge}
+          ${farmBadge}
         </div>
       </div>
       ${noteHtml}

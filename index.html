@@ -460,6 +460,7 @@
       import: true,
       variants: [
         { key:"1-35", label:"3.5g", price:50 },
+        { key:"1-28", label:"28g",  price:350 },
       ]
     },
     {
@@ -918,21 +919,23 @@
     const v = document.getElementById("ppVariants");
     const a = document.getElementById("mengeArrow");
     const t = document.getElementById("mengeToggle");
+    const pp = document.getElementById("productPage");
     if (v.style.display === "none") {
       v.style.display = "block"; a.textContent = "▴"; t.classList.add("open");
       // smooth-scroll ~70% down (not all the way to top)
       setTimeout(() => {
-        const pp = document.getElementById("productPage");
         const tRect = t.getBoundingClientRect();
         const ppRect = pp.getBoundingClientRect();
-        // current toggle offset within the scroll container
         const toggleOffset = pp.scrollTop + tRect.top - ppRect.top;
-        // scroll so toggle sits ~30% down from top (i.e. move ~70% of the way)
         const target = toggleOffset - pp.clientHeight * 0.30;
         pp.scrollTo({ top: Math.max(0, target), behavior: "smooth" });
       }, 80);
     } else {
-      v.style.display = "none"; a.textContent = "▾"; t.classList.remove("open");
+      // reverse: first smooth-scroll back to top, THEN collapse
+      a.textContent = "▾"; t.classList.remove("open");
+      pp.scrollTo({ top: 0, behavior: "smooth" });
+      // wait for the scroll animation to finish before hiding the list
+      setTimeout(() => { v.style.display = "none"; }, 380);
     }
   }
 
@@ -1039,13 +1042,13 @@
       const { product, variant } = findVariant(key);
       const qty = cart[key];
       if (variant.price === 0) {
-        lines.push(`- ${qty}x ${product.name} · ${variant.label} — (Preis Anfrage)`);
+        lines.push(`${product.emoji} ${qty}x ${product.name} · ${variant.label} — (Preis Anfrage)`);
         reqItems.push(`${variant.label} ${product.name}`);
       } else {
         const lineTotal = lineTotalOf(variant, qty);
         total += lineTotal;
         const per = variant.per ? ` (${CURRENCY} ${fmtPrice(variant.price)}/Stk)` : "";
-        lines.push(`- ${qty}x ${product.name} · ${variant.label} — ${CURRENCY} ${fmtPrice(lineTotal)}${per}`);
+        lines.push(`${product.emoji} ${qty}x ${product.name} · ${variant.label} — ${CURRENCY} ${fmtPrice(lineTotal)}${per}`);
       }
     });
 

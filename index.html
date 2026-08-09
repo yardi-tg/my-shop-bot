@@ -275,16 +275,26 @@
       100% { background-position: 0% 300%; }
     }
     .pp-menge-toggle {
-      margin: 10px 16px; padding: 16px 18px;
-      background: linear-gradient(145deg, var(--surface2), var(--surface));
-      border: 1px solid var(--accent); border-radius: 14px;
-      display: flex; align-items: center; justify-content: space-between;
-      font-size: 16px; font-weight: 700; color: var(--accent); cursor: pointer;
-      transition: transform 0.1s, background 0.15s;
+      margin: 10px 16px; padding: 15px 20px;
+      background: var(--accent);
+      border: 1.5px solid var(--accent); border-radius: 14px;
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      font-size: 16px; font-weight: 700; color: #0f0f0f; cursor: pointer;
+      transition: transform 0.1s, background 0.25s, color 0.25s;
+      box-shadow: 0 4px 16px rgba(232,201,126,0.25);
     }
     .pp-menge-toggle:active { transform: scale(0.98); }
-    .pp-menge-toggle.open { border-radius: 14px 14px 0 0; margin-bottom: 0; }
-    .pp-menge-arrow { font-size: 14px; }
+    /* OPEN state: transparent, gold outline only */
+    .pp-menge-toggle.open {
+      background: transparent; color: var(--accent);
+      border-radius: 14px 14px 0 0; margin-bottom: 0;
+      box-shadow: none;
+    }
+    .pp-menge-arrow {
+      font-size: 13px; transition: transform 0.3s ease;
+      display: inline-block;
+    }
+    .pp-menge-toggle.open .pp-menge-arrow { transform: rotate(180deg); }
 
     .pp-variants { padding: 8px 16px 20px; }
     .pp-variants .variant-box { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
@@ -829,7 +839,7 @@
     }
     let heroMedia;
     const media = [];
-    if (p.videos) p.videos.forEach(v => media.push(`<video src="${v}#t=0.1" class="pp-gvid" loop muted playsinline preload="metadata" onclick="toggleVid(this)"></video>`));
+    if (p.videos) p.videos.forEach(v => media.push(`<video src="${v}#t=0.1" class="pp-gvid" loop muted playsinline preload="auto" onclick="toggleVid(this)"></video>`));
     if (p.photos) p.photos.forEach(src => media.push(`<img src="${src}" class="pp-gimg" onerror="this.style.display='none'">`));
     if (media.length) {
       const hint = (p.videos ? "← wischen für mehr Videos →" : "← wischen für mehr Bilder →");
@@ -839,7 +849,7 @@
     }
     const mengeBlock = `
       <div class="pp-menge-toggle" id="mengeToggle" onclick="toggleMenge()">
-        <span>Menge wählen</span>
+        <span class="menge-label" id="mengeLabel">Menge wählen</span>
         <span class="pp-menge-arrow" id="mengeArrow">▾</span>
       </div>
       <div class="pp-variants" id="ppVariants" style="display:none"><div class="variant-box">${variantsHtml}</div></div>`;
@@ -902,7 +912,15 @@
     if (!vids.length) return;
     if (videoObserver) videoObserver.disconnect();
     // PAUSE ALL immediately to avoid double-play on open
-    vids.forEach(v => v.pause());
+    vids.forEach(v => {
+      v.pause();
+      // force-load so the first frame shows instead of black
+      try { v.load(); } catch(e){}
+      // nudge to the poster frame once metadata is ready
+      v.addEventListener("loadedmetadata", () => {
+        try { if (v.currentTime === 0) v.currentTime = 0.1; } catch(e){}
+      }, { once: true });
+    });
     const gal = document.querySelector(".pp-gallery");
     // use scroll listener for precise "which is >60% visible" control
     if (gal) {
@@ -919,23 +937,30 @@
     const v = document.getElementById("ppVariants");
     const a = document.getElementById("mengeArrow");
     const t = document.getElementById("mengeToggle");
+    const label = document.getElementById("mengeLabel");
     const pp = document.getElementById("productPage");
-    if (v.style.display === "none") {
-      v.style.display = "block"; a.textContent = "▴"; t.classList.add("open");
-      // smooth-scroll ~70% down (not all the way to top)
-      setTimeout(() => {
+    const isOpen = t.classList.contains("open");
+    if (!isOpen) {
+      // OPEN
+      v.style.display = "block";
+      t.classList.add("open");
+      label.textContent = "Schließen";
+      // let layout settle, then smooth-scroll ~70% down
+      requestAnimationFrame(() => {
         const tRect = t.getBoundingClientRect();
         const ppRect = pp.getBoundingClientRect();
         const toggleOffset = pp.scrollTop + tRect.top - ppRect.top;
         const target = toggleOffset - pp.clientHeight * 0.30;
         pp.scrollTo({ top: Math.max(0, target), behavior: "smooth" });
-      }, 80);
+      });
     } else {
-      // reverse: first smooth-scroll back to top, THEN collapse
-      a.textContent = "▾"; t.classList.remove("open");
+      // CLOSE: scroll up smoothly first, hide only after it settles
+      t.classList.remove("open");
+      label.textContent = "Menge wählen";
       pp.scrollTo({ top: 0, behavior: "smooth" });
-      // wait for the scroll animation to finish before hiding the list
-      setTimeout(() => { v.style.display = "none"; }, 380);
+      const onDone = () => { v.style.display = "none"; };
+      // hide after the smooth scroll finishes (fallback timeout)
+      setTimeout(onDone, 420);
     }
   }
 

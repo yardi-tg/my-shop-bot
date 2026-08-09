@@ -379,7 +379,7 @@
   <div id="floatingCart" onclick="openCart()">
     <div class="fc-left"><span id="fcCount">0</span> Artikel</div>
     <div>Zum Warenkorb</div>
-    <div class="fc-right" id="fcTotal">CHF 0.00</div>
+    <div class="fc-right" id="fcTotal">CHF 0.–</div>
   </div>
 
   <!-- CART DRAWER -->
@@ -509,10 +509,10 @@
       stars: 4.2,
       import: false,
       variants: [
-        { key:"4-4",   label:"4g",   price:50 },
+        { key:"4-35",  label:"3.5g", price:50 },
         { key:"4-25",  label:"25g",  price:250 },
         { key:"4-50",  label:"50g",  price:450 },
-        { key:"4-100", label:"100g", price:800 },
+        { key:"4-100", label:"100g", price:850 },
         { key:"4-500", label:"500g", price:0 },
         { key:"4-1000",label:"1kg",  price:0 },
         { key:"4-5000",label:"5kg",  price:0 },
@@ -521,6 +521,11 @@
   ];
 
   const CURRENCY = "CHF";
+  // Swiss price format: whole numbers -> "50.–", with rappen -> "3.50"
+  function fmtPrice(n) {
+    if (Number.isInteger(n)) return n + ".\u2013";  // 50.–
+    return n.toFixed(2);                              // 3.50
+  }
   const BOT_BACKEND_URL = "https://my-shop-bot-syvo.onrender.com/order";
   const OWNER_USERNAME = "Standonbu51ness";
 
@@ -675,7 +680,7 @@
     // lowest real price for "ab CHF X"
     const prices = p.variants.filter(v => v.price > 0).map(v => v.price);
     const fromVal = p.fromPrice || (prices.length ? Math.min(...prices) : 0);
-    const fromHtml = fromVal ? `<div class="pt-from">ab ${CURRENCY} ${fromVal.toFixed(2)}</div>` : "";
+    const fromHtml = fromVal ? `<div class="pt-from">ab ${CURRENCY} ${fmtPrice(fromVal)}</div>` : "";
     const bigLine = p.big ? `<div class="pt-strain">${p.big}</div>` : "";
     const big2Line = p.big2 ? `<div class="pt-strain2">${p.big2}</div>` : "";
     let emojiCell;
@@ -721,7 +726,7 @@
       const isReq = v.price === 0;
       const priceHtml = isReq
         ? `<span class="v-price req">Preis auf Anfrage</span>`
-        : `<span class="v-price">${CURRENCY} ${v.price.toFixed(2)}${v.per ? ' <span class="v-unit">/ pro Stück</span>' : ''}</span>`;
+        : `<span class="v-price">${CURRENCY} ${fmtPrice(v.price)}${v.per ? ' <span class="v-unit">/ pro Stück</span>' : ''}</span>`;
       return `<div class="variant ${isReq?'req':''}">
         <div class="v-left"><span class="v-qty">${v.label}</span>${priceHtml}</div>
         <button class="v-add" id="add-${v.key}" onclick="addVariant('${v.key}')">+ Hinzufügen</button>
@@ -888,7 +893,7 @@
     badge.textContent = count; badge.classList.toggle("show", count > 0);
     const fc = document.getElementById("floatingCart");
     document.getElementById("fcCount").textContent = count;
-    document.getElementById("fcTotal").textContent = `${CURRENCY} ${total.toFixed(2)}`;
+    document.getElementById("fcTotal").textContent = `${CURRENCY} ${fmtPrice(total)}`;
     fc.classList.toggle("show", count > 0);
     // product page cart badge
     const ppBadge = document.getElementById("ppCartBadge");
@@ -923,7 +928,7 @@
       const lineTotal = isReq ? 0 : variant.price * qty;
       const priceText = isReq
         ? `<div class="cart-item-price req">Preis auf Anfrage</div>`
-        : `<div class="cart-item-price">${CURRENCY} ${lineTotal.toFixed(2)}${variant.per ? ` (${CURRENCY} ${variant.price}/Stk)` : ''}</div>`;
+        : `<div class="cart-item-price">${CURRENCY} ${fmtPrice(lineTotal)}${variant.per ? ` (${CURRENCY} ${fmtPrice(variant.price)}/Stk)` : ''}</div>`;
       return `<div class="cart-item">
         <div class="cart-item-emoji">${product.emoji}</div>
         <div class="cart-item-info">
@@ -938,7 +943,7 @@
       </div>`;
     }).join("");
     const { total, hasReq } = cartTotals();
-    document.getElementById("cartTotal").textContent = `${CURRENCY} ${total.toFixed(2)}`;
+    document.getElementById("cartTotal").textContent = `${CURRENCY} ${fmtPrice(total)}`;
     document.getElementById("reqNote").style.display = hasReq ? "block" : "none";
     footer.style.display = "block";
   }
@@ -960,13 +965,13 @@
       } else {
         const lineTotal = variant.price * qty;
         total += lineTotal;
-        const per = variant.per ? ` (${CURRENCY} ${variant.price}/Stk)` : "";
-        lines.push(`- ${qty}x ${product.name} · ${variant.label} — ${CURRENCY} ${lineTotal.toFixed(2)}${per}`);
+        const per = variant.per ? ` (${CURRENCY} ${fmtPrice(variant.price)}/Stk)` : "";
+        lines.push(`- ${qty}x ${product.name} · ${variant.label} — ${CURRENCY} ${fmtPrice(lineTotal)}${per}`);
       }
     });
 
     const note = document.getElementById("orderNote").value.trim();
-    let msg = `Ich möchte gerne bestellen.\n${lines.join("\n")}\n💰 Total: ${CURRENCY} ${total.toFixed(2)}`;
+    let msg = `Ich möchte gerne bestellen.\n${lines.join("\n")}\n💰 Total: ${CURRENCY} ${fmtPrice(total)}`;
     if (strainProducts.size > 0) {
       msg += `\n\n🌿 Bitte Sorte angeben:`;
       strainProducts.forEach(s => { msg += `\n• ${s}`; });

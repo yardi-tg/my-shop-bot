@@ -407,7 +407,7 @@
       id: 2,
       name: "THC Vapes",
       type: "THC Vapes",
-      big2: "(20 Flavours · je 2 pro Vape)",
+      big2: "(20 Flavours)",
       shine: "Whole Melt",
       fromPrice: 120,
       strain: "Dual Chamber · USA Import",
@@ -457,6 +457,7 @@
         "https://raw.githubusercontent.com/yardi-tg/my-shop-bot/main/fresh2.mp4",
         "https://raw.githubusercontent.com/yardi-tg/my-shop-bot/main/fresh3.mp4",
       ],
+      wideFrame: 3,
       emoji: "🍔",
       stars: 5,
       import: false,
@@ -483,6 +484,7 @@
         "https://raw.githubusercontent.com/yardi-tg/my-shop-bot/main/static2.mp4",
         "https://raw.githubusercontent.com/yardi-tg/my-shop-bot/main/static3.mp4",
       ],
+      wideFrame: 4,
       emoji: "🍇",
       stars: 4.2,
       import: false,
@@ -656,14 +658,14 @@
     const fromHtml = fromVal ? `<div class="pt-from">ab ${CURRENCY} ${fromVal.toFixed(2)}</div>` : "";
     const bigLine = p.big ? `<div class="pt-strain">${p.big}</div>` : "";
     const big2Line = p.big2 ? `<div class="pt-strain2">${p.big2}</div>` : "";
-    const shineLine = p.shine ? `<div class="pt-shine"><span class="shine-text">${p.shine}</span></div>` : "";
     let emojiCell;
     if (p.videos && p.videos.length >= 3) {
       // frozen video preview collage (first frame, not playing)
+      const wideFrame = p.wideFrame || 0.1;
       emojiCell = `<div class="pt-collage pt-collage-v3">
         <video src="${p.videos[0]}#t=0.1" muted playsinline preload="metadata"></video>
         <video src="${p.videos[1]}#t=0.1" muted playsinline preload="metadata"></video>
-        <video src="${p.videos[2]}#t=0.1" class="vid-wide" muted playsinline preload="metadata"></video>
+        <video src="${p.videos[2]}#t=${wideFrame}" class="vid-wide" muted playsinline preload="metadata"></video>
       </div>`;
     } else if (p.photos && p.photos.length >= 4) {
       emojiCell = `<div class="pt-collage">
@@ -681,7 +683,6 @@
       ${emojiCell}
       <div class="pt-name">${p.name}</div>
       ${bigLine}
-      ${shineLine}
       ${big2Line}
       <div class="pt-desc">${p.desc || p.strain}</div>
       <div class="pt-stars">${starRow(p.stars, 13)}<span class="rt">${p.stars.toFixed(1)}</span></div>
@@ -741,7 +742,7 @@
     document.getElementById("ppBody").innerHTML = `
       <div class="pp-hero">
         ${heroMedia}
-        <div class="pp-name">${p.name}${(p.big || p.shine) ? ` · ${p.big || p.shine}` : ""}</div>
+        <div class="pp-name">${p.name}${p.shine ? ` · <span class="shine-text">${p.shine}</span>` : (p.big ? ` · ${p.big}` : "")}</div>
         <div class="pp-sub">${p.strain}</div>
         <div class="pp-badges">
           <span class="pp-stars">${starRow(p.stars, 16)}<span class="rt">${p.stars.toFixed(1)}</span></span>

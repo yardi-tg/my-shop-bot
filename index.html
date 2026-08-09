@@ -1034,22 +1034,26 @@
     const keys = Object.keys(cart).filter(k => cart[k] > 0);
     if (keys.length === 0) return;
 
-    let lines = [], total = 0;
+    let lines = [], total = 0, reqItems = [];
     keys.forEach(key => {
       const { product, variant } = findVariant(key);
       const qty = cart[key];
       if (variant.price === 0) {
-        lines.push(`• ${qty}x ${product.name} · ${variant.label} — Preis Anfrage`);
+        lines.push(`- ${qty}x ${product.name} · ${variant.label} — (Preis Anfrage)`);
+        reqItems.push(`${variant.label} ${product.name}`);
       } else {
         const lineTotal = lineTotalOf(variant, qty);
         total += lineTotal;
         const per = variant.per ? ` (${CURRENCY} ${fmtPrice(variant.price)}/Stk)` : "";
-        lines.push(`• ${qty}x ${product.name} · ${variant.label} — ${CURRENCY} ${fmtPrice(lineTotal)}${per}`);
+        lines.push(`- ${qty}x ${product.name} · ${variant.label} — ${CURRENCY} ${fmtPrice(lineTotal)}${per}`);
       }
     });
 
     const note = document.getElementById("orderNote").value.trim();
-    let msg = `Bestellung:\n${lines.join("\n")}\n\nTotal: ${CURRENCY} ${fmtPrice(total)}`;
+    let msg = `Ich würde gerne folgendes bestellen:\n\n${lines.join("\n")}\n\nTotal: ${CURRENCY} ${fmtPrice(total)}`;
+    if (reqItems.length > 0) {
+      msg += `\n(+ Preis Anfrage auf ${reqItems.join(", ")})`;
+    }
     if (note) msg += `\n\nNotiz: ${note}`;
 
     const deepLink = `https://t.me/${OWNER_USERNAME}?text=${encodeURIComponent(msg)}`;

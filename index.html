@@ -1067,13 +1067,13 @@
       const { product, variant } = findVariant(key);
       const qty = cart[key];
       if (variant.price === 0) {
-        lines.push(`${product.emoji} ${qty}x ${product.name} · ${variant.label} — (Preis Anfrage)`);
+        lines.push(`- ${qty}x ${product.name} ${product.emoji} · ${variant.label} — (Preis Anfrage)`);
         reqItems.push(`${variant.label} ${product.name}`);
       } else {
         const lineTotal = lineTotalOf(variant, qty);
         total += lineTotal;
         const per = variant.per ? ` (${CURRENCY} ${fmtPrice(variant.price)}/Stk)` : "";
-        lines.push(`${product.emoji} ${qty}x ${product.name} · ${variant.label} — ${CURRENCY} ${fmtPrice(lineTotal)}${per}`);
+        lines.push(`- ${qty}x ${product.name} ${product.emoji} · ${variant.label} — ${CURRENCY} ${fmtPrice(lineTotal)}${per}`);
       }
     });
 

@@ -97,6 +97,23 @@
       background: rgba(232,201,126,0.14); color: var(--accent);
       padding: 3px 8px; border-radius: 6px; text-transform: uppercase;
     }
+    .pt-import {
+      margin-top: 8px;
+      padding: 6px 14px;
+      border-radius: 50px;
+      border: 1px solid rgba(232,201,126,0.4);
+      background: linear-gradient(145deg, rgba(232,201,126,0.10), rgba(0,0,0,0.22));
+      box-shadow: 0 2px 12px rgba(232,201,126,0.14), inset 0 1px 0 rgba(255,255,255,0.06);
+      font-size: 11px; font-weight: 700; letter-spacing: 0.4px;
+      display: inline-flex; align-items: center; gap: 5px;
+    }
+    .import-text {
+      background-image: linear-gradient(90deg, #ff6b6b, #ffa726, #ffee58, #66bb6a, #26c6da, #42a5f5, #7e57c2, #ec407a, #ff6b6b);
+      background-size: 200% auto;
+      -webkit-background-clip: text; background-clip: text;
+      -webkit-text-fill-color: transparent; color: transparent;
+      animation: farmRainbow 4s linear infinite;
+    }
     .pt-arrow {
       position: absolute; top: 12px; right: 12px;
       color: var(--muted); font-size: 16px;
@@ -405,7 +422,7 @@
       big: "OG Exotics USA Cali",
       big2: "(M8 & Black Magic)",
       strain: "M8 & Black Magic",
-      desc: "OG Exotics USA Cali. Strains M8 & Black Magic — Auswahl im privat Chat.",
+      desc: "USA Cali — exotische Cali-Genetik, kräftiges Aroma, erstklassige Premium-Qualität.",
       strainNote: "M8 oder Black Magic (im privat Chat wählen)",
       emoji: "🌳",
       stars: 4.5,
@@ -423,7 +440,7 @@
       shine: "Whole Melt",
       fromPrice: 120,
       strain: "Dual Chamber · USA Import",
-      desc: "20 Flavours, je 2 pro Vape — Auswahl im privat Chat.",
+      desc: "THC Vapes — vollmundiges Aroma, intensives Erlebnis, hochwertiger Whole-Melt-Style.",
       strainNote: "20 Flavours je 2 pro Vape (im privat Chat wählen)",
       photos: [
         "https://raw.githubusercontent.com/yardi-tg/my-shop-bot/main/vape1.jpg",
@@ -492,7 +509,7 @@
       shine: "Forbidden Fruit",
       farm: "Secret Farm",
       strain: "Secret Farm · Double Static Sift",
-      desc: "Double Static Sift Hash. Sauber gesiebt, aromatisch.",
+      desc: "Double Static Sift Hash — intensiv im Aroma, besonders fein verarbeitet, Premium-Qualität.",
       videos: [
         "https://raw.githubusercontent.com/yardi-tg/my-shop-bot/main/static1.mp4",
         "https://raw.githubusercontent.com/yardi-tg/my-shop-bot/main/static2.mp4",
@@ -665,7 +682,7 @@
   // ═══ RENDER PRODUCT TILES ═══
   const listEl = document.getElementById("productList");
   listEl.innerHTML = PRODUCTS.map(p => {
-    const badge = p.import ? `<span class="badge-import">USA Import</span>` : "";
+    const badge = p.import ? `<div class="pt-import">🇺🇸 <span class="import-text">USA Import</span></div>` : "";
     // lowest real price for "ab CHF X"
     const prices = p.variants.filter(v => v.price > 0).map(v => v.price);
     const fromVal = p.fromPrice || (prices.length ? Math.min(...prices) : 0);
@@ -710,7 +727,7 @@
   function openProduct(id) {
     const p = PRODUCTS.find(x => x.id === id);
     if (!p) return;
-    const badge = p.import ? `<span class="badge-import">USA Import</span>` : "";
+    const badge = p.import ? `<div class="pt-import">🇺🇸 <span class="import-text">USA Import</span></div>` : "";
     const variantsHtml = p.variants.map(v => {
       const isReq = v.price === 0;
       const priceHtml = isReq

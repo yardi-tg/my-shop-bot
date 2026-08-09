@@ -53,15 +53,14 @@
     .cart-badge.show { display: flex; }
 
     /* PRODUCT GRID (tall tiles, 2 per row, equal height) */
-    .products { padding: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: stretch; }
+    .products { padding: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: stretch; }
 
     .product-tile {
       position: relative;
       background: linear-gradient(145deg, var(--surface2), var(--surface));
       border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 18px 14px 16px;
-      min-height: 260px;
+      border-radius: 14px;
+      padding: 13px 11px 12px;
       display: flex; flex-direction: column; align-items: center;
       text-align: center; cursor: pointer;
       animation: fadeUp 0.4s ease both;
@@ -71,21 +70,22 @@
     @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
 
     .pt-emoji {
-      font-size: 42px; line-height: 1; margin-bottom: 12px;
-      width: 72px; height: 72px; border-radius: 14px;
+      font-size: 34px; line-height: 1; margin-bottom: 9px;
+      width: 60px; height: 60px; border-radius: 12px;
       background: var(--surface); border: 1px solid var(--border);
       display: flex; align-items: center; justify-content: center; flex-shrink: 0;
     }
     .pt-collage {
-      width: 84px; height: 84px; border-radius: 14px; overflow: hidden;
+      width: 70px; height: 70px; border-radius: 12px; overflow: hidden;
       display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr;
-      gap: 2px; margin-bottom: 12px; border: 1px solid var(--border); flex-shrink: 0;
+      gap: 2px; margin-bottom: 9px; border: 1px solid var(--border); flex-shrink: 0;
       background: var(--surface);
     }
     .pt-collage img { width: 100%; height: 100%; object-fit: cover; }
-    .pt-collage-v4 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 2px; }
-    .pt-collage-v4 video { width: 100%; height: 100%; object-fit: cover; object-position: center; pointer-events: none; background:#000; display:block; }
-    .pt-name { font-size: 18px; font-weight: 700; color: var(--text); line-height: 1.15; margin-bottom: 3px; letter-spacing:-0.2px; }
+    .pt-collage-v3 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 2px; width: 70px; height: 70px; }
+    .pt-collage-v3 video { width: 100%; height: 100%; min-width: 0; min-height: 0; object-fit: cover; object-position: center; pointer-events: none; background:#000; display:block; }
+    .pt-collage-v3 .vid-wide { grid-column: 1 / -1; }
+    .pt-name { font-size: 16px; font-weight: 700; color: var(--text); line-height: 1.15; margin-bottom: 2px; letter-spacing:-0.2px; }
     .pt-strain { font-size: 13px; font-weight: 600; color: var(--accent); line-height: 1.2; margin-bottom: 2px; }
     .pt-strain2 { font-size: 13px; font-weight: 600; color: var(--accent); line-height: 1.25; margin-bottom: 7px; }
     .pt-desc { font-size: 11px; color: var(--muted); line-height: 1.4; margin-bottom: 10px; flex: 1; }
@@ -100,6 +100,20 @@
     .pt-arrow {
       position: absolute; top: 12px; right: 12px;
       color: var(--muted); font-size: 16px;
+    }
+    .pt-shine { margin: 1px 0 3px; }
+    .shine-text {
+      font-size: 14px; font-weight: 700; letter-spacing: 0.3px;
+      background: linear-gradient(110deg, #8a8a8a 0%, #cfcfcf 25%, #ffffff 50%, #cfcfcf 75%, #8a8a8a 100%);
+      background-size: 220% auto;
+      -webkit-background-clip: text; background-clip: text;
+      -webkit-text-fill-color: transparent; color: transparent;
+      animation: silverShine 3s linear infinite;
+      text-shadow: 0 0 1px rgba(255,255,255,0.1);
+    }
+    @keyframes silverShine {
+      0% { background-position: 200% center; }
+      100% { background-position: 0% center; }
     }
     .pt-farm {
       margin-top: 10px;
@@ -375,12 +389,12 @@
   const PRODUCTS = [
     {
       id: 1,
-      name: "Wizard Trees Cali",
+      name: "Wizard Trees",
       type: "Wizard Trees",
-      big: "OG Exotics",
+      big: "OG Exotics USA Cali",
       big2: "(M8 & Black Magic)",
       strain: "M8 & Black Magic",
-      desc: "Premium Cali-Import. Strains M8 & Black Magic — Auswahl im privat Chat.",
+      desc: "OG Exotics USA Cali. Strains M8 & Black Magic — Auswahl im privat Chat.",
       strainNote: "M8 oder Black Magic (im privat Chat wählen)",
       emoji: "🌳",
       stars: 4.5,
@@ -393,8 +407,8 @@
       id: 2,
       name: "THC Vapes",
       type: "THC Vapes",
-      big: "Whole Melt",
       big2: "(20 Flavours · je 2 pro Vape)",
+      shine: "Whole Melt",
       fromPrice: 120,
       strain: "Dual Chamber · USA Import",
       desc: "20 Flavours, je 2 pro Vape — Auswahl im privat Chat.",
@@ -434,7 +448,7 @@
       id: 3,
       name: "Fresh Frozen",
       type: "Fresh Frozen",
-      big: "Hash Burger",
+      shine: "Hash Burger",
       farm: "Secret Farm",
       strain: "Secret Farm · Fresh Frozen Sift",
       desc: "Fresh Frozen Sift Hash. Vollaromatisch, Premium-Qualität.",
@@ -460,10 +474,15 @@
       id: 4,
       name: "Double Static",
       type: "Double Static",
-      big: "Forbidden Fruit",
+      shine: "Forbidden Fruit",
       farm: "Secret Farm",
       strain: "Secret Farm · Double Static Sift",
       desc: "Double Static Sift Hash. Sauber gesiebt, aromatisch.",
+      videos: [
+        "https://raw.githubusercontent.com/yardi-tg/my-shop-bot/main/static1.mp4",
+        "https://raw.githubusercontent.com/yardi-tg/my-shop-bot/main/static2.mp4",
+        "https://raw.githubusercontent.com/yardi-tg/my-shop-bot/main/static3.mp4",
+      ],
       emoji: "🍇",
       stars: 4.2,
       import: false,
@@ -637,14 +656,14 @@
     const fromHtml = fromVal ? `<div class="pt-from">ab ${CURRENCY} ${fromVal.toFixed(2)}</div>` : "";
     const bigLine = p.big ? `<div class="pt-strain">${p.big}</div>` : "";
     const big2Line = p.big2 ? `<div class="pt-strain2">${p.big2}</div>` : "";
+    const shineLine = p.shine ? `<div class="pt-shine"><span class="shine-text">${p.shine}</span></div>` : "";
     let emojiCell;
     if (p.videos && p.videos.length >= 3) {
       // frozen video preview collage (first frame, not playing)
-      emojiCell = `<div class="pt-collage pt-collage-v4">
+      emojiCell = `<div class="pt-collage pt-collage-v3">
         <video src="${p.videos[0]}#t=0.1" muted playsinline preload="metadata"></video>
         <video src="${p.videos[1]}#t=0.1" muted playsinline preload="metadata"></video>
-        <video src="${p.videos[2]}#t=0.1" muted playsinline preload="metadata"></video>
-        <video src="${p.videos[0]}#t=1.0" muted playsinline preload="metadata"></video>
+        <video src="${p.videos[2]}#t=0.1" class="vid-wide" muted playsinline preload="metadata"></video>
       </div>`;
     } else if (p.photos && p.photos.length >= 4) {
       emojiCell = `<div class="pt-collage">
@@ -662,6 +681,7 @@
       ${emojiCell}
       <div class="pt-name">${p.name}</div>
       ${bigLine}
+      ${shineLine}
       ${big2Line}
       <div class="pt-desc">${p.desc || p.strain}</div>
       <div class="pt-stars">${starRow(p.stars, 13)}<span class="rt">${p.stars.toFixed(1)}</span></div>
@@ -721,7 +741,7 @@
     document.getElementById("ppBody").innerHTML = `
       <div class="pp-hero">
         ${heroMedia}
-        <div class="pp-name">${p.name}${p.big ? ` · ${p.big}` : ""}</div>
+        <div class="pp-name">${p.name}${(p.big || p.shine) ? ` · ${p.big || p.shine}` : ""}</div>
         <div class="pp-sub">${p.strain}</div>
         <div class="pp-badges">
           <span class="pp-stars">${starRow(p.stars, 16)}<span class="rt">${p.stars.toFixed(1)}</span></span>

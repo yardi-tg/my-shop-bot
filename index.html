@@ -77,13 +77,30 @@
     }
     .sold-stamp {
       position: absolute; top: 50%; left: 50%;
-      transform: translate(-50%,-50%) rotate(-18deg);
+      transform: translate(-50%,-50%) rotate(-14deg);
       z-index: 5;
-      font-size: 22px; font-weight: 900; letter-spacing: 2px;
-      color: #ff5252; border: 4px solid #ff5252; border-radius: 10px;
-      padding: 6px 16px; background: rgba(0,0,0,0.35);
-      text-transform: uppercase; white-space: nowrap;
-      box-shadow: 0 2px 14px rgba(0,0,0,0.5); text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+      border: 4px solid #c62828; border-radius: 6px;
+      padding: 5px 14px; white-space: nowrap;
+      /* rough, weathered edges via SVG turbulence displacement */
+      filter: url(#grunge);
+      background: transparent;
+      opacity: 0.9;
+    }
+    .sold-stamp span {
+      display: block;
+      font-family: 'Arial Black', 'DM Sans', sans-serif;
+      font-size: 24px; font-weight: 900; letter-spacing: 1px;
+      color: #c62828; text-transform: uppercase;
+      -webkit-text-stroke: 0.4px #c62828;
+    }
+    /* faded ink patches over the stamp for authenticity */
+    .sold-stamp::after {
+      content: ""; position: absolute; inset: -4px;
+      background:
+        radial-gradient(circle at 20% 30%, transparent 40%, rgba(15,15,15,0.55) 55%, transparent 60%),
+        radial-gradient(circle at 70% 60%, transparent 35%, rgba(15,15,15,0.5) 50%, transparent 55%),
+        radial-gradient(circle at 45% 80%, transparent 30%, rgba(15,15,15,0.45) 45%, transparent 50%);
+      pointer-events: none; mix-blend-mode: multiply; border-radius: 6px;
     }
     @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
 
@@ -363,6 +380,12 @@
   </style>
 </head>
 <body>
+  <svg width="0" height="0" style="position:absolute">
+    <filter id="grunge">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02 0.04" numOctaves="5" seed="7" result="noise"/>
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="6" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+  </svg>
 
   <!-- LOCK SCREEN -->
   <div id="lockScreen" style="position:fixed;inset:0;background:#0f0f0f;z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;text-align:center;transition:opacity 0.6s ease;">
@@ -738,16 +761,25 @@
 
   // ═══ SOLD OUT PLACEHOLDER TILES (blurred, not clickable) ═══
   function soldOutTiles() {
-    const fakes = [
-      { emoji: "🍫", name: "Melon Runtz", big: "Cali Import", from: "ab CHF 55.–" },
-      { emoji: "🧊", name: "Ice Kief", big: "Dry Sift", from: "ab CHF 60.–" },
-      { emoji: "🍬", name: "Sugar Rosin", big: "Live Rosin", from: "ab CHF 70.–" },
+    const base = "https://raw.githubusercontent.com/yardi-tg/my-shop-bot/main/";
+    // mix of all available media as blurred previews
+    const mixes = [
+      [base+"vape1.jpg", base+"vape3.jpg", base+"vape2.jpg", base+"vape4.jpg"],
+      [base+"vape4.jpg", base+"vape2.jpg", base+"vape1.jpg", base+"vape3.jpg"],
+      [base+"vape2.jpg", base+"vape1.jpg", base+"vape4.jpg", base+"vape3.jpg"],
     ];
-    return fakes.map(f => `
+    const fakes = [
+      { name: "Melon Runtz", big: "Cali Import", from: "ab CHF 55.–" },
+      { name: "Ice Kief", big: "Dry Sift", from: "ab CHF 60.–" },
+      { name: "Sugar Rosin", big: "Live Rosin", from: "ab CHF 70.–" },
+    ];
+    return fakes.map((f, idx) => {
+      const imgs = mixes[idx].map(src => `<img src="${src}" onerror="this.style.visibility='hidden'">`).join("");
+      return `
       <div class="product-tile sold-out">
-        <div class="sold-stamp">SOLD OUT</div>
+        <div class="sold-stamp"><span>SOLD OUT</span></div>
         <div class="sold-inner">
-          <div class="pt-emoji">${f.emoji}</div>
+          <div class="pt-collage">${imgs}</div>
           <div class="pt-name">${f.name}</div>
           <div class="pt-strain">${f.big}</div>
           <div class="pt-desc">Premium Qualität — bald wieder verfügbar.</div>
@@ -755,7 +787,8 @@
           <div class="pt-from">${f.from}</div>
           <div class="pt-import">🇺🇸 <span class="import-text">USA Import</span></div>
         </div>
-      </div>`).join("");
+      </div>`;
+    }).join("");
   }
 
   function openProduct(id) {

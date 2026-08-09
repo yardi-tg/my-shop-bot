@@ -501,10 +501,10 @@
       desc: "THC Vapes — vollmundiges Aroma, intensives Erlebnis, hochwertiger Whole-Melt-Style.",
       strainNote: "20 Flavours je 2 pro Vape (im privat Chat wählen)",
       photos: [
-        "https://raw.githubusercontent.com/yardi-tg/my-shop-bot/main/vape1.jpg",
-        "https://raw.githubusercontent.com/yardi-tg/my-shop-bot/main/vape2.jpg",
-        "https://raw.githubusercontent.com/yardi-tg/my-shop-bot/main/vape3.jpg",
-        "https://raw.githubusercontent.com/yardi-tg/my-shop-bot/main/vape4.jpg",
+        "https://cdn.jsdelivr.net/gh/yardi-tg/my-shop-bot@main/vape1.jpg",
+        "https://cdn.jsdelivr.net/gh/yardi-tg/my-shop-bot@main/vape2.jpg",
+        "https://cdn.jsdelivr.net/gh/yardi-tg/my-shop-bot@main/vape3.jpg",
+        "https://cdn.jsdelivr.net/gh/yardi-tg/my-shop-bot@main/vape4.jpg",
       ],
       flavors: [
         "Midnight Grape & Zereal Milk",
@@ -541,9 +541,9 @@
       strain: "Secret Farm · Fresh Frozen Sift",
       desc: "Frisch konserviertes Aroma, besonders intensiver Geschmack, feinste Premium-Qualität.",
       videos: [
-        "https://raw.githubusercontent.com/yardi-tg/my-shop-bot/main/fresh1.mp4",
-        "https://raw.githubusercontent.com/yardi-tg/my-shop-bot/main/fresh2.mp4",
-        "https://raw.githubusercontent.com/yardi-tg/my-shop-bot/main/fresh3.mp4",
+        "https://cdn.jsdelivr.net/gh/yardi-tg/my-shop-bot@main/fresh1.mp4",
+        "https://cdn.jsdelivr.net/gh/yardi-tg/my-shop-bot@main/fresh2.mp4",
+        "https://cdn.jsdelivr.net/gh/yardi-tg/my-shop-bot@main/fresh3.mp4",
       ],
       wideFrame: 3,
       emoji: "🥶❄️",
@@ -569,9 +569,9 @@
       strain: "Secret Farm · Double Static Sift",
       desc: "Double Static Sift Hash — intensiv im Aroma, besonders fein verarbeitet, Premium-Qualität.",
       videos: [
-        "https://raw.githubusercontent.com/yardi-tg/my-shop-bot/main/static1.mp4",
-        "https://raw.githubusercontent.com/yardi-tg/my-shop-bot/main/static2.mp4",
-        "https://raw.githubusercontent.com/yardi-tg/my-shop-bot/main/static3.mp4",
+        "https://cdn.jsdelivr.net/gh/yardi-tg/my-shop-bot@main/static1.mp4",
+        "https://cdn.jsdelivr.net/gh/yardi-tg/my-shop-bot@main/static2.mp4",
+        "https://cdn.jsdelivr.net/gh/yardi-tg/my-shop-bot@main/static3.mp4",
       ],
       wideFrame: 4,
       emoji: "2️⃣⚡",
@@ -765,9 +765,9 @@
       // frozen video preview collage (first frame, not playing)
       const wideFrame = p.wideFrame || 0.1;
       emojiCell = `<div class="pt-collage pt-collage-v3">
-        <video src="${p.videos[0]}#t=0.5" muted playsinline preload="metadata"></video>
-        <video src="${p.videos[1]}#t=0.5" muted playsinline preload="metadata"></video>
-        <video src="${p.videos[2]}#t=${wideFrame}" class="vid-wide" muted playsinline preload="metadata"></video>
+        <video src="${p.videos[0]}#t=0.5" muted playsinline preload="metadata" onerror="cdnFallback(this)"></video>
+        <video src="${p.videos[1]}#t=0.5" muted playsinline preload="metadata" onerror="cdnFallback(this)"></video>
+        <video src="${p.videos[2]}#t=${wideFrame}" class="vid-wide" muted playsinline preload="metadata" onerror="cdnFallback(this)"></video>
       </div>`;
     } else if (p.photos && p.photos.length >= 4) {
       emojiCell = `<div class="pt-collage">
@@ -796,7 +796,7 @@
 
   // ═══ SOLD OUT PLACEHOLDER TILES (blurred, not clickable) ═══
   function soldOutTiles() {
-    const base = "https://raw.githubusercontent.com/yardi-tg/my-shop-bot/main/";
+    const base = "https://cdn.jsdelivr.net/gh/yardi-tg/my-shop-bot@main/";
     // mix of all available media as blurred previews
     const mixes = [
       [base+"vape1.jpg", base+"vape3.jpg", base+"vape2.jpg", base+"vape4.jpg"],
@@ -859,7 +859,7 @@
     const media = [];
     if (p.videos) p.videos.forEach((v, i) => {
       const poster = (p.posters && p.posters[i]) ? ` poster="${p.posters[i]}"` : "";
-      media.push(`<video src="${v}#t=0.1"${poster} class="pp-gvid" loop muted playsinline preload="auto" onclick="toggleVid(this)" onloadeddata="this.classList.add('loaded')"></video>`);
+      media.push(`<video src="${v}#t=0.1"${poster} class="pp-gvid" loop muted playsinline preload="auto" onclick="toggleVid(this)" onerror="cdnFallback(this)" onloadeddata="this.classList.add('loaded')"></video>`);
     });
     if (p.photos) p.photos.forEach(src => media.push(`<img src="${src}" class="pp-gimg" onerror="this.style.display='none'">`));
     if (media.length) {
@@ -948,6 +948,20 @@
     }
     // ensure only the visible one keeps playing
     setTimeout(playOnlyVisible, 200);
+  }
+
+  // If a CDN (jsDelivr) media URL fails, fall back to raw.githubusercontent once.
+  function cdnFallback(el) {
+    if (el.dataset.fellback) return;
+    el.dataset.fellback = "1";
+    const src = el.getAttribute("src") || "";
+    if (src.indexOf("cdn.jsdelivr.net/gh/") !== -1) {
+      const raw = src
+        .replace("https://cdn.jsdelivr.net/gh/", "https://raw.githubusercontent.com/")
+        .replace("@main/", "/main/");
+      el.setAttribute("src", raw);
+      if (el.tagName === "VIDEO") { try { el.load(); el.play().catch(()=>{}); } catch(e){} }
+    }
   }
 
   // Preload all product videos quietly in the background after unlock,
@@ -1105,13 +1119,13 @@
       const { product, variant } = findVariant(key);
       const qty = cart[key];
       if (variant.price === 0) {
-        lines.push(`- ${qty}x ${product.name} ${product.emoji} · ${variant.label} — (Preis Anfrage)`);
+        lines.push(`- ${qty}x ${product.name} · ${variant.label} — (Preis Anfrage)`);
         reqItems.push(`${variant.label} ${product.name}`);
       } else {
         const lineTotal = lineTotalOf(variant, qty);
         total += lineTotal;
         const per = variant.per ? ` (${CURRENCY} ${fmtPrice(variant.price)}/Stk)` : "";
-        lines.push(`- ${qty}x ${product.name} ${product.emoji} · ${variant.label} — ${CURRENCY} ${fmtPrice(lineTotal)}${per}`);
+        lines.push(`- ${qty}x ${product.name} · ${variant.label} — ${CURRENCY} ${fmtPrice(lineTotal)}${per}`);
       }
     });
 

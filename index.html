@@ -307,10 +307,12 @@
     .pp-menge-toggle.open .pp-menge-arrow { transform: rotate(180deg); }
 
     .pp-variants {
-      padding: 0 16px; max-height: 0; opacity: 0; overflow: hidden;
-      transition: max-height 0.4s cubic-bezier(0.4,0,0.2,1), opacity 0.3s ease, padding 0.4s ease;
+      padding: 8px 16px 20px;
+      display: none;
+      animation: variantsFade 0.25s ease;
     }
-    .pp-variants.open { max-height: 2000px; opacity: 1; padding: 8px 16px 20px; }
+    .pp-variants.open { display: block; }
+    @keyframes variantsFade { from { opacity: 0; } to { opacity: 1; } }
     .pp-variants .variant-box { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
     .pp-vlabel { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin: 8px 4px 2px; }
 
@@ -714,6 +716,8 @@
         input.style.borderColor = "#0f0"; input.style.boxShadow = "0 0 20px #0f06";
         btn.textContent = "ACCESS GRANTED"; btn.style.background = "#0f0"; btn.style.color = "#000"; btn.style.fontFamily = "monospace";
         startMatrixSequence();
+        // quietly warm up the video cache in the background
+        prefetchVideos();
       } else {
         btn.textContent = "🔓 ENTSPERREN"; btn.disabled = false;
         errorEl.textContent = "❌ Falscher Code! Frage den Shopinhaber nach dem heutigen Code.";
@@ -853,7 +857,10 @@
     }
     let heroMedia;
     const media = [];
-    if (p.videos) p.videos.forEach((v, i) => media.push(`<video src="${v}#t=0.1" class="pp-gvid" loop muted playsinline preload="${i === 0 ? 'auto' : 'metadata'}" onclick="toggleVid(this)"></video>`));
+    if (p.videos) p.videos.forEach((v, i) => {
+      const poster = (p.posters && p.posters[i]) ? ` poster="${p.posters[i]}"` : "";
+      media.push(`<video src="${v}#t=0.1"${poster} class="pp-gvid" loop muted playsinline preload="auto" onclick="toggleVid(this)" onloadeddata="this.classList.add('loaded')"></video>`);
+    });
     if (p.photos) p.photos.forEach(src => media.push(`<img src="${src}" class="pp-gimg" onerror="this.style.display='none'">`));
     if (media.length) {
       const hint = (p.videos ? "← wischen für mehr Videos →" : "← wischen für mehr Bilder →");
@@ -942,6 +949,22 @@
     // ensure only the visible one keeps playing
     setTimeout(playOnlyVisible, 200);
   }
+
+  // Preload all product videos quietly in the background after unlock,
+  // so they're cached by the time the user opens a hash product (no black screen).
+  let videosPrefetched = false;
+  function prefetchVideos() {
+    if (videosPrefetched) return;
+    videosPrefetched = true;
+    PRODUCTS.forEach(p => {
+      if (!p.videos) return;
+      p.videos.forEach(url => {
+        // fetch into browser cache; ignore result
+        fetch(url, { mode: "no-cors", cache: "force-cache" }).catch(() => {});
+      });
+    });
+  }
+
   function toggleVid(v) {
     if (v.paused) v.play(); else v.pause();
   }
@@ -952,26 +975,30 @@
     const pp = document.getElementById("productPage");
     const isOpen = t.classList.contains("open");
     if (!isOpen) {
-      // OPEN: expand list (animated), scroll follows the growing height smoothly
+      // OPEN: show instantly (no lag), then smooth-scroll it into view
       v.classList.add("open");
       t.classList.add("open");
       label.textContent = "Schließen";
-      // scroll a few times during the expand so it tracks the growing content
-      const doScroll = () => {
+      requestAnimationFrame(() => {
         const tRect = t.getBoundingClientRect();
         const ppRect = pp.getBoundingClientRect();
         const toggleOffset = pp.scrollTop + tRect.top - ppRect.top;
         const target = toggleOffset - pp.clientHeight * 0.30;
         pp.scrollTo({ top: Math.max(0, target), behavior: "smooth" });
-      };
-      setTimeout(doScroll, 120);
-      setTimeout(doScroll, 300);
+      });
     } else {
-      // CLOSE: collapse (animated height) + scroll up together — heights shrink smoothly, no jump
-      v.classList.remove("open");
+      // CLOSE: scroll up first; only hide once we're back near the top (prevents jump)
       t.classList.remove("open");
       label.textContent = "Menge wählen";
       pp.scrollTo({ top: 0, behavior: "smooth" });
+      const hideWhenTop = () => {
+        if (pp.scrollTop <= 4) {
+          v.classList.remove("open");
+        } else {
+          requestAnimationFrame(hideWhenTop);
+        }
+      };
+      requestAnimationFrame(hideWhenTop);
     }
   }
 

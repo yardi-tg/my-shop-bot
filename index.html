@@ -432,7 +432,7 @@
     <div id="cartItems"></div>
     <div id="cartFooter" style="display:none">
       <div class="cart-total"><span>Gesamt</span><span class="total-amount" id="cartTotal"></span></div>
-      <div class="req-note" id="reqNote" style="display:none">Einige Artikel sind auf Anfrage — der Endpreis wird persönlich bestätigt.</div>
+      <div class="req-note" id="reqNote" style="display:none">Anfrage-Artikel: Preis wird im Chat bestätigt.</div>
       <div class="note-section">
         <label>Notiz hinzufügen (optional)</label>
         <textarea class="note-input" id="orderNote" rows="2" placeholder="z.B. Lieferung, Zeit, Fragen..."></textarea>
@@ -496,12 +496,12 @@
       import: true,
       unit: "Stück",
       variants: [
-        { key:"2-1",   label:"1 Stück",   price:120, per:true },
-        { key:"2-5",   label:"5 Stück",   price:100, per:true },
-        { key:"2-10",  label:"10 Stück",  price:85,  per:true },
-        { key:"2-25",  label:"25 Stück",  price:70,  per:true },
-        { key:"2-50",  label:"50 Stück",  price:62,  per:true },
-        { key:"2-100", label:"100 Stück", price:50,  per:true },
+        { key:"2-1",   label:"1 Stück",   price:120, per:true, pieces:1 },
+        { key:"2-5",   label:"5 Stück",   price:100, per:true, pieces:5 },
+        { key:"2-10",  label:"10 Stück",  price:85,  per:true, pieces:10 },
+        { key:"2-25",  label:"25 Stück",  price:70,  per:true, pieces:25 },
+        { key:"2-50",  label:"50 Stück",  price:62,  per:true, pieces:50 },
+        { key:"2-100", label:"100 Stück", price:50,  per:true, pieces:100 },
       ]
     },
     {
@@ -567,6 +567,12 @@
   function fmtPrice(n) {
     if (Number.isInteger(n)) return n + ".\u2013";  // 50.–
     return n.toFixed(2);                              // 3.50
+  }
+  // Line total: for per-piece variants, price × pieces × qty; else price × qty
+  function lineTotalOf(variant, qty) {
+    if (variant.price === 0) return 0;
+    const mult = variant.pieces ? variant.pieces : 1;
+    return variant.price * mult * qty;
   }
   const BOT_BACKEND_URL = "https://my-shop-bot-syvo.onrender.com/order";
   const OWNER_USERNAME = "Standonbu51ness";
@@ -799,7 +805,7 @@
     const variantsHtml = p.variants.map(v => {
       const isReq = v.price === 0;
       const priceHtml = isReq
-        ? `<span class="v-price req">Preis auf Anfrage</span>`
+        ? `<span class="v-price req">Preis Anfrage</span>`
         : `<span class="v-price">${CURRENCY} ${fmtPrice(v.price)}${v.per ? ' <span class="v-unit">/ pro Stück</span>' : ''}</span>`;
       return `<div class="variant ${isReq?'req':''}">
         <div class="v-left"><span class="v-qty">${v.label}</span>${priceHtml}</div>
@@ -957,7 +963,7 @@
       const qty = cart[key];
       count += qty;
       if (found.variant.price === 0) hasReq = true;
-      else total += found.variant.price * qty;
+      else total += lineTotalOf(found.variant, qty);
     }
     return { count, total, hasReq };
   }
@@ -1000,9 +1006,9 @@
       const { product, variant } = findVariant(key);
       const qty = cart[key];
       const isReq = variant.price === 0;
-      const lineTotal = isReq ? 0 : variant.price * qty;
+      const lineTotal = lineTotalOf(variant, qty);
       const priceText = isReq
-        ? `<div class="cart-item-price req">Preis auf Anfrage</div>`
+        ? `<div class="cart-item-price req">Preis Anfrage</div>`
         : `<div class="cart-item-price">${CURRENCY} ${fmtPrice(lineTotal)}${variant.per ? ` (${CURRENCY} ${fmtPrice(variant.price)}/Stk)` : ''}</div>`;
       return `<div class="cart-item">
         <div class="cart-item-emoji">${product.emoji}</div>
@@ -1028,31 +1034,23 @@
     const keys = Object.keys(cart).filter(k => cart[k] > 0);
     if (keys.length === 0) return;
 
-    let lines = [], total = 0, hasReq = false;
-    const strainProducts = new Set();
+    let lines = [], total = 0;
     keys.forEach(key => {
       const { product, variant } = findVariant(key);
       const qty = cart[key];
-      if (product.strainNote) strainProducts.add(product.name + " → " + product.strainNote);
       if (variant.price === 0) {
-        hasReq = true;
-        lines.push(`- ${qty}x ${product.name} · ${variant.label} — ANFRAGE (Preis auf Anfrage)`);
+        lines.push(`• ${qty}x ${product.name} · ${variant.label} — Preis Anfrage`);
       } else {
-        const lineTotal = variant.price * qty;
+        const lineTotal = lineTotalOf(variant, qty);
         total += lineTotal;
         const per = variant.per ? ` (${CURRENCY} ${fmtPrice(variant.price)}/Stk)` : "";
-        lines.push(`- ${qty}x ${product.name} · ${variant.label} — ${CURRENCY} ${fmtPrice(lineTotal)}${per}`);
+        lines.push(`• ${qty}x ${product.name} · ${variant.label} — ${CURRENCY} ${fmtPrice(lineTotal)}${per}`);
       }
     });
 
     const note = document.getElementById("orderNote").value.trim();
-    let msg = `Ich möchte gerne bestellen.\n${lines.join("\n")}\n💰 Total: ${CURRENCY} ${fmtPrice(total)}`;
-    if (strainProducts.size > 0) {
-      msg += `\n\n🌿 Bitte Sorte angeben:`;
-      strainProducts.forEach(s => { msg += `\n• ${s}`; });
-    }
-    if (hasReq) msg += `\n📩 Enthält Anfrage-Artikel — bitte Preis bestätigen.`;
-    if (note) msg += `\n📝 Notiz: ${note}`;
+    let msg = `Bestellung:\n${lines.join("\n")}\n\nTotal: ${CURRENCY} ${fmtPrice(total)}`;
+    if (note) msg += `\n\nNotiz: ${note}`;
 
     const deepLink = `https://t.me/${OWNER_USERNAME}?text=${encodeURIComponent(msg)}`;
     if (tg) { tg.openTelegramLink(deepLink); setTimeout(()=>tg.close(),500); }

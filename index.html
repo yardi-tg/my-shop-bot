@@ -296,7 +296,11 @@
     }
     .pp-menge-toggle.open .pp-menge-arrow { transform: rotate(180deg); }
 
-    .pp-variants { padding: 8px 16px 20px; }
+    .pp-variants {
+      padding: 0 16px; max-height: 0; opacity: 0; overflow: hidden;
+      transition: max-height 0.4s cubic-bezier(0.4,0,0.2,1), opacity 0.3s ease, padding 0.4s ease;
+    }
+    .pp-variants.open { max-height: 2000px; opacity: 1; padding: 8px 16px 20px; }
     .pp-variants .variant-box { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
     .pp-vlabel { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin: 8px 4px 2px; }
 
@@ -852,7 +856,7 @@
         <span class="menge-label" id="mengeLabel">Menge wählen</span>
         <span class="pp-menge-arrow" id="mengeArrow">▾</span>
       </div>
-      <div class="pp-variants" id="ppVariants" style="display:none"><div class="variant-box">${variantsHtml}</div></div>`;
+      <div class="pp-variants" id="ppVariants"><div class="variant-box">${variantsHtml}</div></div>`;
     // For vapes: show Menge FIRST, then the flavors list. Others: flavors then Menge.
     const middle = p.flavors ? (mengeBlock + flavorsHtml) : (flavorsHtml + mengeBlock);
     document.getElementById("ppBody").innerHTML = `
@@ -935,32 +939,31 @@
   }
   function toggleMenge() {
     const v = document.getElementById("ppVariants");
-    const a = document.getElementById("mengeArrow");
     const t = document.getElementById("mengeToggle");
     const label = document.getElementById("mengeLabel");
     const pp = document.getElementById("productPage");
     const isOpen = t.classList.contains("open");
     if (!isOpen) {
-      // OPEN
-      v.style.display = "block";
+      // OPEN: expand list (animated), scroll follows the growing height smoothly
+      v.classList.add("open");
       t.classList.add("open");
       label.textContent = "Schließen";
-      // let layout settle, then smooth-scroll ~70% down
-      requestAnimationFrame(() => {
+      // scroll a few times during the expand so it tracks the growing content
+      const doScroll = () => {
         const tRect = t.getBoundingClientRect();
         const ppRect = pp.getBoundingClientRect();
         const toggleOffset = pp.scrollTop + tRect.top - ppRect.top;
         const target = toggleOffset - pp.clientHeight * 0.30;
         pp.scrollTo({ top: Math.max(0, target), behavior: "smooth" });
-      });
+      };
+      setTimeout(doScroll, 120);
+      setTimeout(doScroll, 300);
     } else {
-      // CLOSE: scroll up smoothly first, hide only after it settles
+      // CLOSE: collapse (animated height) + scroll up together — heights shrink smoothly, no jump
+      v.classList.remove("open");
       t.classList.remove("open");
       label.textContent = "Menge wählen";
       pp.scrollTo({ top: 0, behavior: "smooth" });
-      const onDone = () => { v.style.display = "none"; };
-      // hide after the smooth scroll finishes (fallback timeout)
-      setTimeout(onDone, 420);
     }
   }
 

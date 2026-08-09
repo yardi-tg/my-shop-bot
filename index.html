@@ -710,33 +710,46 @@
   }
   function closeProduct() {
     document.getElementById("productPage").classList.remove("open");
-    if (videoObserver) { videoObserver.disconnect(); videoObserver = null; }
+    const gal = document.querySelector(".pp-gallery");
+    if (gal) gal.onscroll = null;
     document.querySelectorAll(".pp-gvid").forEach(v => v.pause());
   }
   let videoObserver = null;
+  function playOnlyVisible() {
+    const vids = [...document.querySelectorAll(".pp-gvid")];
+    const gal = document.querySelector(".pp-gallery");
+    if (!vids.length || !gal) return;
+    const galRect = gal.getBoundingClientRect();
+    let best = null, bestRatio = 0;
+    vids.forEach(v => {
+      const r = v.getBoundingClientRect();
+      // visible width within the gallery viewport
+      const visW = Math.max(0, Math.min(r.right, galRect.right) - Math.max(r.left, galRect.left));
+      const ratio = visW / r.width;
+      if (ratio > bestRatio) { bestRatio = ratio; best = v; }
+    });
+    vids.forEach(v => {
+      if (v === best && bestRatio >= 0.6) {
+        const pr = v.play(); if (pr && pr.catch) pr.catch(()=>{});
+      } else {
+        v.pause();
+      }
+    });
+  }
   function setupVideoObserver() {
     const vids = document.querySelectorAll(".pp-gvid");
     if (!vids.length) return;
     if (videoObserver) videoObserver.disconnect();
-    videoObserver = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        const v = entry.target;
-        if (entry.isIntersecting && entry.intersectionRatio >= 0.6) {
-          // pause all others first, then play this one
-          document.querySelectorAll(".pp-gvid").forEach(o => { if (o !== v) o.pause(); });
-          const pr = v.play();
-          if (pr && pr.catch) pr.catch(()=>{});
-        } else {
-          v.pause();
-        }
-      });
-    }, { threshold: [0, 0.6, 1] });
-    vids.forEach(v => videoObserver.observe(v));
-    // kick the first video so it shows immediately (autoplay first frame)
-    setTimeout(() => {
-      const first = vids[0];
-      if (first) { const pr = first.play(); if (pr && pr.catch) pr.catch(()=>{}); }
-    }, 100);
+    // PAUSE ALL immediately to avoid double-play on open
+    vids.forEach(v => v.pause());
+    const gal = document.querySelector(".pp-gallery");
+    // use scroll listener for precise "which is >60% visible" control
+    if (gal) {
+      gal.onscroll = () => { window.requestAnimationFrame(playOnlyVisible); };
+    }
+    // initial: play only the first (fully visible) one after layout settles
+    setTimeout(playOnlyVisible, 120);
+    setTimeout(playOnlyVisible, 350);
   }
   function toggleVid(v) {
     if (v.paused) v.play(); else v.pause();
@@ -747,9 +760,16 @@
     const t = document.getElementById("mengeToggle");
     if (v.style.display === "none") {
       v.style.display = "block"; a.textContent = "▴"; t.classList.add("open");
-      // smooth-scroll the toggle up so the variants list is nicely in view
+      // smooth-scroll ~70% down (not all the way to top)
       setTimeout(() => {
-        t.scrollIntoView({ behavior: "smooth", block: "start" });
+        const pp = document.getElementById("productPage");
+        const tRect = t.getBoundingClientRect();
+        const ppRect = pp.getBoundingClientRect();
+        // current toggle offset within the scroll container
+        const toggleOffset = pp.scrollTop + tRect.top - ppRect.top;
+        // scroll so toggle sits ~30% down from top (i.e. move ~70% of the way)
+        const target = toggleOffset - pp.clientHeight * 0.30;
+        pp.scrollTo({ top: Math.max(0, target), behavior: "smooth" });
       }, 80);
     } else {
       v.style.display = "none"; a.textContent = "▾"; t.classList.remove("open");

@@ -202,7 +202,18 @@
     .pp-gvid::-webkit-media-controls-enclosure { display: none !important; }
     .pp-gallery { padding-left: 5vw; padding-right: 5vw; gap: 14px; justify-content: flex-start; }
     .pp-gallery-hint { font-size: 14px; font-weight:600; color: var(--accent); margin-bottom: 16px; }
-    .pp-name { font-family: 'Playfair Display', serif; font-size: 24px; color: var(--text); margin-bottom: 6px; }
+    .pp-name { font-family: 'Playfair Display', serif; font-size: 30px; margin-bottom: 6px; line-height: 1.15; color: var(--text); }
+    .pp-name-main {
+      background: linear-gradient(90deg, #ff6b6b, #ffa726, #ffee58, #66bb6a, #26c6da, #42a5f5, #7e57c2, #ec407a, #ff6b6b);
+      background-size: 200% auto;
+      -webkit-background-clip: text; background-clip: text;
+      -webkit-text-fill-color: transparent; color: transparent;
+      animation: ppNameRainbow 6s linear infinite;
+    }
+    @keyframes ppNameRainbow {
+      0% { background-position: 0% center; }
+      100% { background-position: 200% center; }
+    }
     .pp-sub { font-size: 13px; color: var(--muted); margin-bottom: 12px; }
     .pp-badges { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center; }
     .pp-stars { display:inline-flex; align-items:center; gap:6px; }
@@ -407,6 +418,7 @@
       id: 2,
       name: "THC Vapes",
       type: "THC Vapes",
+      big: "Whole Melt",
       big2: "(20 Flavours)",
       shine: "Whole Melt",
       fromPrice: 120,
@@ -448,6 +460,7 @@
       id: 3,
       name: "Fresh Frozen",
       type: "Fresh Frozen",
+      big: "Hash Burger",
       shine: "Hash Burger",
       farm: "Secret Farm",
       strain: "Secret Farm · Fresh Frozen Sift",
@@ -475,6 +488,7 @@
       id: 4,
       name: "Double Static",
       type: "Double Static",
+      big: "Forbidden Fruit",
       shine: "Forbidden Fruit",
       farm: "Secret Farm",
       strain: "Secret Farm · Double Static Sift",
@@ -742,7 +756,7 @@
     document.getElementById("ppBody").innerHTML = `
       <div class="pp-hero">
         ${heroMedia}
-        <div class="pp-name">${p.name}${p.shine ? ` · <span class="shine-text">${p.shine}</span>` : (p.big ? ` · ${p.big}` : "")}</div>
+        <div class="pp-name"><span class="pp-name-main">${p.name}</span>${p.shine ? ` · <span class="shine-text">${p.shine}</span>` : (p.big ? ` · <span class="shine-text">${p.big}</span>` : "")}</div>
         <div class="pp-sub">${p.strain}</div>
         <div class="pp-badges">
           <span class="pp-stars">${starRow(p.stars, 16)}<span class="rt">${p.stars.toFixed(1)}</span></span>

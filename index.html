@@ -119,10 +119,12 @@
       padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 10px;
     }
     .pp-back-text {
-      background: none; border: none; color: var(--accent);
-      font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 600; cursor: pointer;
-      padding: 6px 4px; flex-shrink: 0;
+      background: var(--surface2); border: 1px solid var(--border); color: var(--accent);
+      font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer;
+      padding: 8px 16px; border-radius: 50px; flex-shrink: 0;
+      display: flex; align-items: center; gap: 4px;
     }
+    .pp-back-text:active { transform: scale(0.96); }
     .pp-htitle { font-size: 15px; font-weight: 600; color: var(--text); text-align: center; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .pp-cart-btn {
       position: relative; background: var(--surface2); border: 1px solid var(--border);
@@ -315,7 +317,7 @@
   <!-- FULL PRODUCT PAGE (overlay) -->
   <div class="product-page" id="productPage">
     <div class="pp-header">
-      <button class="pp-back-text" onclick="closeProduct()">Zurück</button>
+      <button class="pp-back-text" onclick="closeProduct()">‹ Zurück</button>
       <div class="pp-htitle" id="ppTitle"></div>
       <button class="pp-cart-btn" onclick="openCart()">🛒<span class="pp-cart-badge" id="ppCartBadge">0</span></button>
     </div>
@@ -353,8 +355,9 @@
   const PRODUCTS = [
     {
       id: 1,
-      name: "OG Exotics",
-      big: "Wizard Trees Cali",
+      name: "Wizard Trees Cali",
+      type: "Wizard Trees",
+      big: "OG Exotics",
       big2: "(M8 & Black Magic)",
       strain: "M8 & Black Magic",
       desc: "Premium Cali-Import. Strains M8 & Black Magic — Auswahl im privat Chat.",
@@ -369,6 +372,7 @@
     {
       id: 2,
       name: "Whole Melt",
+      type: "THC Vapes",
       big: "THC Vapes",
       big2: "(20 Flavours · je 2 pro Vape)",
       fromPrice: 120,
@@ -409,6 +413,7 @@
     {
       id: 3,
       name: "Fresh Frozen",
+      type: "Fresh Frozen",
       big: "Hash Burger",
       strain: "Secret Farm · Fresh Frozen Sift",
       desc: "Fresh Frozen Sift Hash. Vollaromatisch, Premium-Qualität.",
@@ -433,6 +438,7 @@
     {
       id: 4,
       name: "Double Static",
+      type: "Double Static",
       big: "Forbidden Fruit",
       strain: "Secret Farm · Double Static Sift",
       desc: "Double Static Sift Hash. Sauber gesiebt, aromatisch.",
@@ -661,7 +667,7 @@
         </div>
       </div>`;
     }).join("");
-    document.getElementById("ppTitle").textContent = p.big || p.strain || p.name;
+    document.getElementById("ppTitle").textContent = p.type || p.name;
     const noteHtml = p.strainNote ? `<div class="pp-note">📋 ${p.strainNote}</div>` : "";
     let flavorsHtml = "";
     if (p.flavors && p.flavors.length) {
@@ -680,6 +686,14 @@
     } else {
       heroMedia = `<div class="pp-emoji">${p.emoji}</div>`;
     }
+    const mengeBlock = `
+      <div class="pp-menge-toggle" id="mengeToggle" onclick="toggleMenge()">
+        <span>Menge wählen</span>
+        <span class="pp-menge-arrow" id="mengeArrow">▾</span>
+      </div>
+      <div class="pp-variants" id="ppVariants" style="display:none"><div class="variant-box">${variantsHtml}</div></div>`;
+    // For vapes: show Menge FIRST, then the flavors list. Others: flavors then Menge.
+    const middle = p.flavors ? (mengeBlock + flavorsHtml) : (flavorsHtml + mengeBlock);
     document.getElementById("ppBody").innerHTML = `
       <div class="pp-hero">
         ${heroMedia}
@@ -691,12 +705,7 @@
         </div>
       </div>
       ${noteHtml}
-      ${flavorsHtml}
-      <div class="pp-menge-toggle" id="mengeToggle" onclick="toggleMenge()">
-        <span>Menge wählen</span>
-        <span class="pp-menge-arrow" id="mengeArrow">▾</span>
-      </div>
-      <div class="pp-variants" id="ppVariants" style="display:none"><div class="variant-box">${variantsHtml}</div></div>`;
+      ${middle}`;
     document.getElementById("productPage").classList.add("open");
     // restore any existing cart quantities on the variant steppers
     p.variants.forEach(v => refreshVariant(v.key));

@@ -101,6 +101,27 @@
       position: absolute; top: 12px; right: 12px;
       color: var(--muted); font-size: 16px;
     }
+    .pt-farm {
+      margin-top: 10px;
+      padding: 7px 16px;
+      border-radius: 50px;
+      border: 1px solid rgba(232,201,126,0.45);
+      background: linear-gradient(145deg, rgba(232,201,126,0.12), rgba(0,0,0,0.25));
+      box-shadow: 0 3px 14px rgba(232,201,126,0.18), inset 0 1px 0 rgba(255,255,255,0.08);
+      font-size: 12px; font-weight: 700; letter-spacing: 0.4px;
+      display: inline-flex; align-items: center; gap: 5px;
+    }
+    .pt-farm-text {
+      background-image: linear-gradient(90deg, #ff6b6b, #ffa726, #ffee58, #66bb6a, #26c6da, #42a5f5, #7e57c2, #ec407a, #ff6b6b);
+      background-size: 200% auto;
+      -webkit-background-clip: text; background-clip: text;
+      -webkit-text-fill-color: transparent; color: transparent;
+      animation: farmRainbow 4s linear infinite;
+    }
+    @keyframes farmRainbow {
+      0% { background-position: 0% center; }
+      100% { background-position: 200% center; }
+    }
 
     /* FULL PRODUCT PAGE (overlay) */
     .product-page {
@@ -116,20 +137,19 @@
       position: sticky; top: 0; z-index: 5;
       background: rgba(15,15,15,0.92); backdrop-filter: blur(16px);
       border-bottom: 1px solid var(--border);
-      padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      padding: 14px 16px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px;
     }
     .pp-back-text {
       background: var(--surface2); border: 1px solid var(--border); color: var(--accent);
-      font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer;
-      padding: 8px 16px; border-radius: 50px; flex-shrink: 0;
-      display: flex; align-items: center; gap: 4px;
+      font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer;
+      padding: 8px 14px; border-radius: 50px; justify-self: start;
     }
     .pp-back-text:active { transform: scale(0.96); }
-    .pp-htitle { font-size: 15px; font-weight: 600; color: var(--text); text-align: center; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .pp-htitle { font-size: 15px; font-weight: 700; color: var(--text); text-align: center; white-space: nowrap; }
     .pp-cart-btn {
       position: relative; background: var(--surface2); border: 1px solid var(--border);
       color: var(--text); border-radius: 50px; padding: 7px 12px; font-size: 16px; cursor: pointer;
-      flex-shrink: 0; display: flex; align-items: center;
+      justify-self: end; display: flex; align-items: center;
     }
     .pp-cart-badge {
       background: var(--accent); color: #000; font-size: 10px; font-weight: 700;
@@ -317,7 +337,7 @@
   <!-- FULL PRODUCT PAGE (overlay) -->
   <div class="product-page" id="productPage">
     <div class="pp-header">
-      <button class="pp-back-text" onclick="closeProduct()">‹ Zurück</button>
+      <button class="pp-back-text" onclick="closeProduct()">Zurück</button>
       <div class="pp-htitle" id="ppTitle"></div>
       <button class="pp-cart-btn" onclick="openCart()">🛒<span class="pp-cart-badge" id="ppCartBadge">0</span></button>
     </div>
@@ -371,9 +391,9 @@
     },
     {
       id: 2,
-      name: "Whole Melt",
+      name: "THC Vapes",
       type: "THC Vapes",
-      big: "THC Vapes",
+      big: "Whole Melt",
       big2: "(20 Flavours · je 2 pro Vape)",
       fromPrice: 120,
       strain: "Dual Chamber · USA Import",
@@ -415,6 +435,7 @@
       name: "Fresh Frozen",
       type: "Fresh Frozen",
       big: "Hash Burger",
+      farm: "Secret Farm",
       strain: "Secret Farm · Fresh Frozen Sift",
       desc: "Fresh Frozen Sift Hash. Vollaromatisch, Premium-Qualität.",
       videos: [
@@ -440,6 +461,7 @@
       name: "Double Static",
       type: "Double Static",
       big: "Forbidden Fruit",
+      farm: "Secret Farm",
       strain: "Secret Farm · Double Static Sift",
       desc: "Double Static Sift Hash. Sauber gesiebt, aromatisch.",
       emoji: "🍇",
@@ -634,6 +656,7 @@
     } else {
       emojiCell = `<div class="pt-emoji">${p.emoji}</div>`;
     }
+    const farmBadge = p.farm ? `<div class="pt-farm">💎 <span class="pt-farm-text">${p.farm}</span></div>` : "";
     return `<div class="product-tile" onclick="openProduct(${p.id})">
       <div class="pt-arrow">›</div>
       ${emojiCell}
@@ -644,6 +667,7 @@
       <div class="pt-stars">${starRow(p.stars, 13)}<span class="rt">${p.stars.toFixed(1)}</span></div>
       ${fromHtml}
       ${badge}
+      ${farmBadge}
     </div>`;
   }).join("");
 

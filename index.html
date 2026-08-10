@@ -765,9 +765,9 @@
       // frozen video preview collage (first frame, not playing)
       const wideFrame = p.wideFrame || 0.1;
       emojiCell = `<div class="pt-collage pt-collage-v3">
-        <video src="${p.videos[0]}#t=0.5" muted playsinline preload="metadata" onerror="cdnFallback(this)"></video>
-        <video src="${p.videos[1]}#t=0.5" muted playsinline preload="metadata" onerror="cdnFallback(this)"></video>
-        <video src="${p.videos[2]}#t=${wideFrame}" class="vid-wide" muted playsinline preload="metadata" onerror="cdnFallback(this)"></video>
+        <video src="${p.videos[0]}#t=0.5" muted playsinline preload="auto" onerror="cdnFallback(this)"></video>
+        <video src="${p.videos[1]}#t=0.5" muted playsinline preload="auto" onerror="cdnFallback(this)"></video>
+        <video src="${p.videos[2]}#t=${wideFrame}" class="vid-wide" muted playsinline preload="auto" onerror="cdnFallback(this)"></video>
       </div>`;
     } else if (p.photos && p.photos.length >= 4) {
       emojiCell = `<div class="pt-collage">
@@ -970,13 +970,22 @@
   function prefetchVideos() {
     if (videosPrefetched) return;
     videosPrefetched = true;
+    // Use real hidden <video preload="auto"> elements — this fills the media cache
+    // the same way the tile <img> tags do for the vape photos.
+    const holder = document.createElement("div");
+    holder.style.cssText = "position:absolute;width:0;height:0;overflow:hidden;opacity:0;pointer-events:none";
     PRODUCTS.forEach(p => {
       if (!p.videos) return;
       p.videos.forEach(url => {
-        // fetch into browser cache; ignore result
-        fetch(url, { mode: "no-cors", cache: "force-cache" }).catch(() => {});
+        const v = document.createElement("video");
+        v.src = url;
+        v.preload = "auto";
+        v.muted = true;
+        v.playsInline = true;
+        holder.appendChild(v);
       });
     });
+    document.body.appendChild(holder);
   }
 
   function toggleVid(v) {

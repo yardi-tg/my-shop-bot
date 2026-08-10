@@ -783,9 +783,9 @@
       // frozen video preview collage (first frame, not playing)
       const wideFrame = p.wideFrame || 0.1;
       emojiCell = `<div class="pt-collage pt-collage-v3">
-        <video src="${videoSrc(p.videos[0])}#t=0.5" muted playsinline preload="none" onerror="cdnFallback(this)"></video>
-        <video src="${videoSrc(p.videos[1])}#t=0.5" muted playsinline preload="none" onerror="cdnFallback(this)"></video>
-        <video src="${videoSrc(p.videos[2])}#t=${wideFrame}" class="vid-wide" muted playsinline preload="none" onerror="cdnFallback(this)"></video>
+        <video src="${videoSrc(p.videos[0])}#t=0.5" class="pt-vid" muted playsinline preload="metadata" onerror="cdnFallback(this)"></video>
+        <video src="${videoSrc(p.videos[1])}#t=0.5" class="pt-vid" muted playsinline preload="metadata" onerror="cdnFallback(this)"></video>
+        <video src="${videoSrc(p.videos[2])}#t=${wideFrame}" class="vid-wide pt-vid" muted playsinline preload="metadata" onerror="cdnFallback(this)"></video>
       </div>`;
     } else if (p.photos && p.photos.length >= 4) {
       emojiCell = `<div class="pt-collage">
@@ -1003,7 +1003,7 @@
         const blob = await res.blob();
         videoBlobs[url] = URL.createObjectURL(blob);
         // swap the ready blob into any element still pointing at the network URL
-        document.querySelectorAll("video").forEach(v => {
+        document.querySelectorAll("video.pp-gvid").forEach(v => {
           const cur = v.getAttribute("src") || "";
           const raw = cur.split("#")[0];
           if (raw === url) {
@@ -1015,7 +1015,23 @@
         });
       } catch (e) { /* falls back to the normal URL */ }
     };
+    // Let the tile preview frames load first, then start the heavy downloads.
+    const tiles = [...document.querySelectorAll("video.pt-vid")];
+    const tileReady = new Promise(resolve => {
+      if (!tiles.length) return resolve();
+      let left = tiles.length;
+      const done = () => { if (--left <= 0) resolve(); };
+      tiles.forEach(v => {
+        if (v.readyState >= 1) done();
+        else {
+          v.addEventListener("loadedmetadata", done, { once: true });
+          v.addEventListener("error", done, { once: true });
+        }
+      });
+      setTimeout(resolve, 1500); // never wait longer than this
+    });
     (async () => {
+      await tileReady;
       await Promise.all(firsts.map(grab));   // the ones needed first
       await Promise.all(rest.map(grab));     // the rest
     })();

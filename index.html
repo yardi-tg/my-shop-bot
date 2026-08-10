@@ -357,7 +357,16 @@
     }
     .drawer.open { transform: translateY(0); }
     .drawer-handle { width: 40px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 20px; }
-    .drawer-title { font-family: 'Playfair Display', serif; font-size: 20px; margin-bottom: 16px; color: var(--accent); }
+    .drawer-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; gap: 12px; }
+    .drawer-title { font-family: 'Playfair Display', serif; font-size: 20px; color: var(--accent); }
+    .clear-cart-btn {
+      background: transparent; border: 1px solid var(--border); color: var(--muted);
+      font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600;
+      padding: 7px 14px; border-radius: 50px; cursor: pointer; flex-shrink: 0;
+      transition: color 0.15s, border-color 0.15s, transform 0.1s;
+    }
+    .clear-cart-btn:active { transform: scale(0.96); }
+    .clear-cart-btn.confirm { color: #ff5252; border-color: #ff5252; }
 
     .cart-item { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); }
     .cart-item-emoji { font-size: 26px; }
@@ -454,7 +463,10 @@
   <div class="drawer-overlay" id="drawerOverlay" onclick="closeCart()"></div>
   <div class="drawer" id="drawer">
     <div class="drawer-handle"></div>
-    <div class="drawer-title">Ihre Bestellung</div>
+    <div class="drawer-head">
+      <div class="drawer-title">Ihre Bestellung</div>
+      <button class="clear-cart-btn" id="clearCartBtn" onclick="clearCart()" style="display:none">Leeren</button>
+    </div>
     <div id="cartItems"></div>
     <div id="cartFooter" style="display:none">
       <div class="cart-total"><span>Gesamt</span><span class="total-amount" id="cartTotal"></span></div>
@@ -771,9 +783,9 @@
       // frozen video preview collage (first frame, not playing)
       const wideFrame = p.wideFrame || 0.1;
       emojiCell = `<div class="pt-collage pt-collage-v3">
-        <video src="${videoSrc(p.videos[0])}#t=0.5" muted playsinline preload="auto" onerror="cdnFallback(this)"></video>
-        <video src="${videoSrc(p.videos[1])}#t=0.5" muted playsinline preload="auto" onerror="cdnFallback(this)"></video>
-        <video src="${videoSrc(p.videos[2])}#t=${wideFrame}" class="vid-wide" muted playsinline preload="auto" onerror="cdnFallback(this)"></video>
+        <video src="${videoSrc(p.videos[0])}#t=0.5" muted playsinline preload="none" onerror="cdnFallback(this)"></video>
+        <video src="${videoSrc(p.videos[1])}#t=0.5" muted playsinline preload="none" onerror="cdnFallback(this)"></video>
+        <video src="${videoSrc(p.videos[2])}#t=${wideFrame}" class="vid-wide" muted playsinline preload="none" onerror="cdnFallback(this)"></video>
       </div>`;
     } else if (p.photos && p.photos.length >= 4) {
       emojiCell = `<div class="pt-collage">
@@ -976,27 +988,36 @@
   function prefetchVideos() {
     if (videosPrefetched) return;
     videosPrefetched = true;
-    const urls = [];
-    PRODUCTS.forEach(p => { if (p.videos) p.videos.forEach(u => urls.push(u)); });
-    // download sequentially so we don't saturate the connection
+    // Priority order: first video of each product first (that's what opens first),
+    // then the rest. Download them in parallel — no duplicate <video> requests now.
+    const firsts = [], rest = [];
+    PRODUCTS.forEach(p => {
+      if (!p.videos) return;
+      p.videos.forEach((u, i) => (i === 0 ? firsts : rest).push(u));
+    });
+    const grab = async (url) => {
+      if (videoBlobs[url]) return;
+      try {
+        const res = await fetch(url, { cache: "force-cache" });
+        if (!res.ok) return;
+        const blob = await res.blob();
+        videoBlobs[url] = URL.createObjectURL(blob);
+        // swap the ready blob into any element still pointing at the network URL
+        document.querySelectorAll("video").forEach(v => {
+          const cur = v.getAttribute("src") || "";
+          const raw = cur.split("#")[0];
+          if (raw === url) {
+            const frag = cur.split("#")[1];
+            v.src = videoBlobs[url] + (frag ? "#" + frag : "");
+            v.preload = "auto";
+            try { v.load(); } catch (e) {}
+          }
+        });
+      } catch (e) { /* falls back to the normal URL */ }
+    };
     (async () => {
-      for (const url of urls) {
-        if (videoBlobs[url]) continue;
-        try {
-          const res = await fetch(url, { cache: "force-cache" });
-          if (!res.ok) continue;
-          const blob = await res.blob();
-          videoBlobs[url] = URL.createObjectURL(blob);
-          // swap into any video element already showing this url
-          document.querySelectorAll("video").forEach(v => {
-            const raw = (v.getAttribute("src") || "").split("#")[0];
-            if (raw === url) {
-              const frag = (v.getAttribute("src") || "").split("#")[1];
-              v.src = videoBlobs[url] + (frag ? "#" + frag : "");
-            }
-          });
-        } catch (e) { /* ignore, falls back to normal URL */ }
-      }
+      await Promise.all(firsts.map(grab));   // the ones needed first
+      await Promise.all(rest.map(grab));     // the rest
     })();
   }
 
@@ -1047,6 +1068,30 @@
     if (cart[key] === 0) delete cart[key];
     refreshVariant(key); updateCartUI(); refreshCartDrawer();
   }
+  // Empty the whole cart — first tap asks, second tap clears
+  let clearArmed = false, clearTimer = null;
+  function clearCart() {
+    const btn = document.getElementById("clearCartBtn");
+    if (!clearArmed) {
+      clearArmed = true;
+      btn.textContent = "Wirklich leeren?";
+      btn.classList.add("confirm");
+      clearTimer = setTimeout(resetClearBtn, 3000);
+      return;
+    }
+    clearTimeout(clearTimer);
+    resetClearBtn();
+    // clear every entry, refresh the product page steppers too
+    Object.keys(cart).forEach(key => { delete cart[key]; refreshVariant(key); });
+    updateCartUI();
+    renderCartItems();
+  }
+  function resetClearBtn() {
+    const btn = document.getElementById("clearCartBtn");
+    clearArmed = false;
+    if (btn) { btn.textContent = "Leeren"; btn.classList.remove("confirm"); }
+  }
+
   // Re-render the open cart drawer so items, quantities and total stay in sync
   function refreshCartDrawer() {
     const drawer = document.getElementById("drawer");
@@ -1103,11 +1148,14 @@
     const container = document.getElementById("cartItems");
     const footer = document.getElementById("cartFooter");
     const keys = Object.keys(cart).filter(k => cart[k] > 0);
+    const clearBtn = document.getElementById("clearCartBtn");
     if (keys.length === 0) {
       container.innerHTML = `<div class="empty-cart"><div class="empty-cart-icon">🛒</div>Ihr Warenkorb ist leer</div>`;
       footer.style.display = "none";
+      if (clearBtn) { clearBtn.style.display = "none"; resetClearBtn(); }
       return;
     }
+    if (clearBtn) clearBtn.style.display = "block";
     container.innerHTML = keys.map(key => {
       const { product, variant } = findVariant(key);
       const qty = cart[key];

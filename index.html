@@ -10,22 +10,69 @@
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
     :root {
-      --bg: #0f0f0f;
-      --surface: #1a1a1a;
-      --surface2: #242424;
-      --border: #2e2e2e;
-      --accent: #e8c97e;
-      --accent2: #c9a84c;
-      --text: #f0ece2;
-      --muted: #888;
+      --bg: #0b0614;
+      --surface: #1c1233;
+      --surface2: #281a45;
+      --border: rgba(183,148,246,0.22);
+      --accent: #c9a9ff;
+      --accent2: #9d6bff;
+      --text: #f2edfb;
+      --muted: #9a8ab8;
       --danger: #e07070;
-      --star: #e8c97e;
+      --star: #c9a9ff;
       --radius: 16px;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ═══ FLOATING SMOKE BACKGROUND ═══ */
+    .smoke-bg {
+      position: fixed; inset: -25%; z-index: 900;
+      pointer-events: none; overflow: hidden;
+    }
+    .smoke-bg span {
+      position: absolute; display: block; border-radius: 50%;
+      will-change: transform;
+    }
+    .smoke-bg .s1 {
+      width: 62vw; height: 62vw; left: 4%; top: 12%;
+      background: radial-gradient(circle at 42% 45%, rgba(226,214,255,0.13), rgba(178,148,240,0.06) 48%, transparent 72%);
+      animation: smokeA 52s ease-in-out infinite alternate;
+    }
+    .smoke-bg .s2 {
+      width: 78vw; height: 78vw; right: -6%; top: 30%;
+      background: radial-gradient(circle at 55% 40%, rgba(205,186,255,0.11), rgba(150,120,220,0.05) 50%, transparent 74%);
+      animation: smokeB 68s ease-in-out infinite alternate;
+    }
+    .smoke-bg .s3 {
+      width: 55vw; height: 55vw; left: 22%; bottom: 6%;
+      background: radial-gradient(circle at 48% 52%, rgba(236,228,255,0.10), rgba(190,160,245,0.05) 46%, transparent 70%);
+      animation: smokeC 60s ease-in-out infinite alternate;
+    }
+    .smoke-bg .s4 {
+      width: 44vw; height: 44vw; right: 14%; bottom: 26%;
+      background: radial-gradient(circle at 50% 50%, rgba(214,198,255,0.12), rgba(165,135,230,0.05) 47%, transparent 72%);
+      animation: smokeD 45s ease-in-out infinite alternate;
+    }
+    .smoke-bg .s5 {
+      width: 70vw; height: 70vw; left: -12%; top: 48%;
+      background: radial-gradient(circle at 46% 44%, rgba(222,208,255,0.09), rgba(158,128,225,0.045) 50%, transparent 74%);
+      animation: smokeE 75s ease-in-out infinite alternate;
+    }
+    @keyframes smokeA { from { transform: translate(-6vw,-4vh) scale(1) rotate(0deg); } to { transform: translate(20vw,10vh) scale(1.28) rotate(16deg); } }
+    @keyframes smokeB { from { transform: translate(5vw,6vh) scale(1.15) rotate(8deg); } to { transform: translate(-16vw,-8vh) scale(0.92) rotate(-12deg); } }
+    @keyframes smokeC { from { transform: translate(-4vw,5vh) scale(0.95) rotate(-6deg); } to { transform: translate(14vw,-11vh) scale(1.22) rotate(14deg); } }
+    @keyframes smokeD { from { transform: translate(6vw,-3vh) scale(1.1) rotate(10deg); } to { transform: translate(-12vw,9vh) scale(0.9) rotate(-10deg); } }
+    @keyframes smokeE { from { transform: translate(3vw,4vh) scale(1) rotate(0deg); } to { transform: translate(-10vw,-13vh) scale(1.3) rotate(-18deg); } }
+    /* smoke drifts OVER the whole room (very low opacity, clicks pass through) */
+    .header, .products { position: relative; z-index: 1; }
+
     body {
       font-family: 'DM Sans', sans-serif;
-      background: var(--bg);
+      background:
+        radial-gradient(1100px 700px at 85% -10%, rgba(109,63,199,0.28), transparent 60%),
+        radial-gradient(900px 650px at -15% 108%, rgba(76,29,149,0.32), transparent 62%),
+        var(--bg);
+      background-attachment: fixed;
       color: var(--text);
       min-height: 100vh;
       padding-bottom: 110px;
@@ -34,13 +81,19 @@
     /* HEADER */
     .header {
       position: sticky; top: 0; z-index: 100;
-      background: rgba(15,15,15,0.92);
+      background: rgba(13,7,26,0.86);
       backdrop-filter: blur(16px);
       border-bottom: 1px solid var(--border);
       padding: 16px 20px;
       display: flex; align-items: center; justify-content: space-between;
     }
-    .header-title { font-family: 'Playfair Display', serif; font-size: 22px; color: var(--accent); letter-spacing: 0.5px; }
+    .header-title {
+      font-family: 'Playfair Display', serif; font-size: 22px; letter-spacing: 0.5px;
+      background: linear-gradient(95deg, #efe6ff, #c9a9ff 45%, #8b5cf6);
+      -webkit-background-clip: text; background-clip: text;
+      -webkit-text-fill-color: transparent; color: transparent;
+      filter: drop-shadow(0 0 14px rgba(155,107,255,0.45));
+    }
     .cart-btn {
       position: relative; background: var(--surface2); border: 1px solid var(--border);
       color: var(--text); border-radius: 50px; padding: 8px 16px;
@@ -120,7 +173,13 @@
     }
     .pt-collage img { width: 100%; height: 100%; object-fit: cover; }
     .pt-collage-v3 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 2px; width: 70px; height: 70px; }
-    .pt-collage-v3 video { width: 100%; height: 100%; min-width: 0; min-height: 0; object-fit: cover; object-position: center; pointer-events: none; background:#000; display:block; }
+    .pt-collage-v3 video {
+      width: 100%; height: 100%; min-width: 0; min-height: 0;
+      object-fit: cover; object-position: center; pointer-events: none; display: block;
+      background: linear-gradient(135deg, #1a1030 25%, #2a1b4a 50%, #1a1030 75%);
+      background-size: 400% 400%;
+      animation: vidShimmer 1.6s ease infinite;
+    }
     .pt-collage-v3 .vid-wide { grid-column: 1 / -1; }
     .pt-name { font-size: 16px; font-weight: 700; color: var(--text); line-height: 1.15; margin-bottom: 2px; letter-spacing:-0.2px; }
     .pt-strain { font-size: 13px; font-weight: 600; color: var(--accent); line-height: 1.2; margin-bottom: 2px; }
@@ -131,16 +190,16 @@
     .pt-from { font-size: 13px; font-weight: 700; color: var(--accent); margin-bottom: 8px; }
     .badge-import {
       font-size: 9px; font-weight: 700; letter-spacing: 0.5px;
-      background: rgba(232,201,126,0.14); color: var(--accent);
+      background: rgba(183,148,246,0.14); color: var(--accent);
       padding: 3px 8px; border-radius: 6px; text-transform: uppercase;
     }
     .pt-import {
       margin-top: 8px;
       padding: 6px 14px;
       border-radius: 50px;
-      border: 1px solid rgba(232,201,126,0.4);
-      background: linear-gradient(145deg, rgba(232,201,126,0.10), rgba(0,0,0,0.22));
-      box-shadow: 0 2px 12px rgba(232,201,126,0.14), inset 0 1px 0 rgba(255,255,255,0.06);
+      border: 1px solid rgba(183,148,246,0.4);
+      background: linear-gradient(145deg, rgba(183,148,246,0.10), rgba(0,0,0,0.22));
+      box-shadow: 0 2px 12px rgba(183,148,246,0.14), inset 0 1px 0 rgba(255,255,255,0.06);
       font-size: 11px; font-weight: 700; letter-spacing: 0.4px;
       display: inline-flex; align-items: center; gap: 5px;
     }
@@ -173,9 +232,9 @@
       margin-top: 10px;
       padding: 7px 16px;
       border-radius: 50px;
-      border: 1px solid rgba(232,201,126,0.45);
-      background: linear-gradient(145deg, rgba(232,201,126,0.12), rgba(0,0,0,0.25));
-      box-shadow: 0 3px 14px rgba(232,201,126,0.18), inset 0 1px 0 rgba(255,255,255,0.08);
+      border: 1px solid rgba(183,148,246,0.45);
+      background: linear-gradient(145deg, rgba(183,148,246,0.12), rgba(0,0,0,0.25));
+      box-shadow: 0 3px 14px rgba(183,148,246,0.18), inset 0 1px 0 rgba(255,255,255,0.08);
       font-size: 12px; font-weight: 700; letter-spacing: 0.4px;
       display: inline-flex; align-items: center; gap: 5px;
     }
@@ -194,7 +253,10 @@
     /* FULL PRODUCT PAGE (overlay) */
     .product-page {
       position: fixed; inset: 0; z-index: 300;
-      background: var(--bg);
+      background:
+        radial-gradient(1100px 700px at 85% -10%, rgba(109,63,199,0.28), transparent 60%),
+        radial-gradient(900px 650px at -15% 108%, rgba(76,29,149,0.32), transparent 62%),
+        var(--bg);
       transform: translateX(100%);
       transition: transform 0.3s cubic-bezier(0.32,0.72,0,1);
       overflow-y: auto;
@@ -203,7 +265,7 @@
     .product-page.open { transform: translateX(0); }
     .pp-header {
       position: sticky; top: 0; z-index: 5;
-      background: rgba(15,15,15,0.92); backdrop-filter: blur(16px);
+      background: rgba(13,7,26,0.86); backdrop-filter: blur(16px);
       border-bottom: 1px solid var(--border);
       padding: 14px 16px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px;
     }
@@ -252,7 +314,7 @@
       border-radius: 18px; border: 1px solid var(--border);
       flex-shrink: 0; scroll-snap-align: center;
       display: block; object-fit: cover; cursor: pointer;
-      background: linear-gradient(135deg, #1a1a1a 25%, #242424 50%, #1a1a1a 75%);
+      background: linear-gradient(135deg, #1a1030 25%, #2a1b4a 50%, #1a1030 75%);
       background-size: 400% 400%;
       animation: vidShimmer 1.5s ease infinite;
     }
@@ -270,7 +332,7 @@
     .pp-badges .pt-import, .pp-badges .pt-farm { margin-top: 0; }
     .pp-stars { display:inline-flex; align-items:center; gap:6px; }
     .pp-stars .rt { color: var(--muted); font-size: 13px; font-weight:600; }
-    .pp-note { margin: 8px 16px 0; padding: 12px 14px; background: rgba(232,201,126,0.08); border:1px solid var(--border); border-radius:12px; font-size:13px; color:var(--accent); text-align:center; }
+    .pp-note { margin: 8px 16px 0; padding: 12px 14px; background: rgba(183,148,246,0.08); border:1px solid var(--border); border-radius:12px; font-size:13px; color:var(--accent); text-align:center; }
     .pp-flavors-text { padding: 4px 16px 12px; font-size:14px; line-height:1.9; color:var(--text); font-weight:500; }
     .rainbow-text {
       background: linear-gradient(180deg, #ff6b6b, #ffa726, #ffee58, #66bb6a, #26c6da, #42a5f5, #7e57c2, #ec407a, #ff6b6b);
@@ -289,12 +351,12 @@
       background: var(--accent);
       border: 1.5px solid var(--accent); border-radius: 14px;
       display: flex; align-items: center; justify-content: center; gap: 10px;
-      font-size: 16px; font-weight: 700; color: #0f0f0f; cursor: pointer;
+      font-size: 16px; font-weight: 700; color: #140a24; cursor: pointer;
       transition: transform 0.1s, background 0.25s, color 0.25s;
-      box-shadow: 0 4px 16px rgba(232,201,126,0.25);
+      box-shadow: 0 4px 16px rgba(183,148,246,0.25);
     }
     .pp-menge-toggle:active { transform: scale(0.98); }
-    /* OPEN state: transparent, gold outline only */
+    /* OPEN state: transparent, violet outline only */
     .pp-menge-toggle.open {
       background: transparent; color: var(--accent);
       border-radius: 14px 14px 0 0; margin-bottom: 0;
@@ -322,7 +384,7 @@
       border-bottom: 1px solid var(--border);
     }
     .variant:last-child { border-bottom: none; }
-    .variant.req { background: rgba(232,201,126,0.04); }
+    .variant.req { background: rgba(183,148,246,0.04); }
     .v-left { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
     .v-qty { font-size: 16px; font-weight: 600; color: var(--text); }
     .v-price { font-size: 14px; font-weight: 600; color: var(--accent); }
@@ -399,7 +461,7 @@
       background: var(--accent); color: #000; border-radius: 16px; padding: 15px 20px;
       display: none; align-items: center; justify-content: space-between;
       font-weight: 700; font-size: 15px; cursor: pointer; z-index: 150;
-      box-shadow: 0 8px 30px rgba(232,201,126,0.35);
+      box-shadow: 0 8px 30px rgba(183,148,246,0.35);
       transform: translateY(120px); transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1);
     }
     #floatingCart.show { display: flex; transform: translateY(0); }
@@ -410,7 +472,7 @@
     /* LOCK SCREEN */
     @keyframes shake { 0%,100%{transform:translateX(0);} 20%{transform:translateX(-8px);} 40%{transform:translateX(8px);} 60%{transform:translateX(-6px);} 80%{transform:translateX(6px);} }
     .shake-error { animation: shake 0.4s ease !important; }
-    #codeInput:focus { border-color: #e8c97e !important; box-shadow: 0 0 12px #e8c97e44; }
+    #codeInput:focus { border-color: #c9a9ff !important; box-shadow: 0 0 16px rgba(155,107,255,0.45); }
     #matrixCanvas { position: fixed; inset: 0; z-index: 600; display: none; background: #000; }
   </style>
 </head>
@@ -422,13 +484,15 @@
     </filter>
   </svg>
 
+  <div class="smoke-bg" aria-hidden="true"><span class="s1"></span><span class="s2"></span><span class="s3"></span><span class="s4"></span><span class="s5"></span></div>
+
   <!-- LOCK SCREEN -->
-  <div id="lockScreen" style="position:fixed;inset:0;background:#0f0f0f;z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;text-align:center;transition:opacity 0.6s ease;">
+  <div id="lockScreen" style="position:fixed;inset:0;background:radial-gradient(900px 600px at 80% -5%, rgba(109,63,199,0.30), transparent 60%),radial-gradient(800px 550px at -10% 105%, rgba(76,29,149,0.34), transparent 62%),#0b0614;z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;text-align:center;transition:opacity 0.6s ease;">
     <div id="lockIcon" style="font-size:56px;margin-bottom:20px;transition:all 0.3s;">🔒</div>
-    <div style="font-family:'Playfair Display',serif;font-size:26px;color:#e8c97e;margin-bottom:8px;">Blocktheke</div>
-    <div style="color:#888;font-size:13px;margin-bottom:32px;letter-spacing:1px;">ZUGANGSCODE EINGEBEN</div>
-    <input id="codeInput" type="text" inputmode="numeric" maxlength="4" placeholder="••••" style="background:#1a1a1a;border:2px solid #2e2e2e;color:#e8c97e;border-radius:14px;padding:16px 20px;font-size:28px;text-align:center;letter-spacing:12px;width:170px;outline:none;margin-bottom:20px;font-family:'DM Sans',sans-serif;" />
-    <button id="unlockBtn" style="background:#e8c97e;color:#000;border:none;border-radius:14px;padding:15px 40px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;cursor:pointer;letter-spacing:1px;">🔓 ENTSPERREN</button>
+    <div style="font-family:'Playfair Display',serif;font-size:28px;background:linear-gradient(95deg,#efe6ff,#c9a9ff 45%,#8b5cf6);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;filter:drop-shadow(0 0 16px rgba(155,107,255,0.5));margin-bottom:8px;letter-spacing:0.5px;">Blocktheke</div>
+    <div style="color:#9a8ab8;font-size:13px;margin-bottom:32px;letter-spacing:1px;">ZUGANGSCODE EINGEBEN</div>
+    <input id="codeInput" type="text" inputmode="numeric" maxlength="4" placeholder="••••" style="background:rgba(28,18,51,0.85);border:2px solid rgba(183,148,246,0.28);color:#c9a9ff;border-radius:14px;padding:16px 20px;font-size:28px;text-align:center;letter-spacing:12px;width:170px;outline:none;margin-bottom:20px;font-family:'DM Sans',sans-serif;" />
+    <button id="unlockBtn" style="background:linear-gradient(135deg,#c9a9ff,#8b5cf6);color:#140a24;border:none;border-radius:14px;box-shadow:0 6px 22px rgba(139,92,246,0.35);padding:15px 40px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;cursor:pointer;letter-spacing:1px;">🔓 ENTSPERREN</button>
     <div id="lockError" style="color:#e07070;font-size:13px;margin-top:16px;display:none;"></div>
   </div>
   <canvas id="matrixCanvas"></canvas>
@@ -657,9 +721,9 @@
     let running = true;
     function draw() {
       if (!running) return;
-      ctx.fillStyle = "rgba(0,0,0,0.08)";
+      ctx.fillStyle = "rgba(11,6,20,0.10)";
       ctx.fillRect(0,0,canvas.width,canvas.height);
-      ctx.fillStyle = "#0f0"; ctx.font = fontSize + "px monospace";
+      ctx.fillStyle = "#b794f6"; ctx.font = fontSize + "px monospace";
       for (let i=0;i<drops.length;i++){
         const ch = chars[Math.floor(Math.random()*chars.length)];
         ctx.fillText(ch, i*fontSize, drops[i]*fontSize);
@@ -731,8 +795,8 @@
       const data = await res.json();
       if (data.valid) {
         lockIcon.textContent = "🔓";
-        input.style.borderColor = "#0f0"; input.style.boxShadow = "0 0 20px #0f06";
-        btn.textContent = "ACCESS GRANTED"; btn.style.background = "#0f0"; btn.style.color = "#000"; btn.style.fontFamily = "monospace";
+        input.style.borderColor = "#b794f6"; input.style.boxShadow = "0 0 22px rgba(183,148,246,0.45)";
+        btn.textContent = "ACCESS GRANTED"; btn.style.background = "#b794f6"; btn.style.color = "#140a24"; btn.style.fontFamily = "monospace";
         startMatrixSequence();
         // quietly warm up the video cache in the background
         prefetchVideos();
@@ -743,7 +807,7 @@
         input.style.borderColor = "#e07070"; input.value = "";
         input.classList.remove("shake-error"); void input.offsetWidth; input.classList.add("shake-error");
         lockIcon.textContent = "🔒";
-        setTimeout(()=>{ input.style.borderColor = "#2e2e2e"; },1000);
+        setTimeout(()=>{ input.style.borderColor = "rgba(183,148,246,0.28)"; },1000);
       }
     } catch(e) {
       btn.textContent = "🔓 ENTSPERREN"; btn.disabled = false;
@@ -924,6 +988,38 @@
     if (gal) gal.onscroll = null;
     document.querySelectorAll(".pp-gvid").forEach(v => v.pause());
   }
+  // Swipe horizontally to go back (works anywhere except on the horizontal media gallery)
+  (function setupSwipeBack(){
+    const pp = document.getElementById("productPage");
+    let startX = 0, startY = 0, tracking = false, onGallery = false;
+    pp.addEventListener("touchstart", (e) => {
+      if (e.touches.length !== 1) { tracking = false; return; }
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      onGallery = !!e.target.closest(".pp-gallery");
+      tracking = true;
+    }, { passive: true });
+    pp.addEventListener("touchmove", (e) => {
+      if (!tracking || onGallery) return;
+      const dx = e.touches[0].clientX - startX;
+      const dy = e.touches[0].clientY - startY;
+      if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 30) {
+        pp.style.transform = `translateX(${Math.max(0, dx)}px)`;
+        pp.style.transition = "none";
+      }
+    }, { passive: true });
+    pp.addEventListener("touchend", (e) => {
+      if (!tracking) return; tracking = false;
+      pp.style.transition = "";
+      pp.style.transform = "";
+      if (onGallery) return;
+      const dx = e.changedTouches[0].clientX - startX;
+      const dy = e.changedTouches[0].clientY - startY;
+      if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 1.3) {
+        closeProduct();
+      }
+    }, { passive: true });
+  })();
   let videoObserver = null;
   function playOnlyVisible() {
     const vids = [...document.querySelectorAll(".pp-gvid")];
@@ -958,7 +1054,11 @@
     // Play the first video immediately so it shows frames instead of black.
     const first = vids[0];
     if (first) {
-      const kick = () => { const pr = first.play(); if (pr && pr.catch) pr.catch(()=>{}); };
+      const kick = () => {
+        // only if the user hasn't scrolled the gallery away from video 1
+        if (gal && gal.scrollLeft > 40) { playOnlyVisible(); return; }
+        const pr = first.play(); if (pr && pr.catch) pr.catch(()=>{});
+      };
       kick();
       // if not ready yet, play as soon as it can
       first.addEventListener("canplay", kick, { once: true });

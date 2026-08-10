@@ -595,6 +595,12 @@
     if (Number.isInteger(n)) return n + ".\u2013";  // 50.–
     return n.toFixed(2);                              // 3.50
   }
+  // Videos fully downloaded into memory as blobs -> instant playback, no network wait.
+  // (preload="auto" is only a hint; mobile browsers ignore it on cellular,
+  //  so we download the bytes ourselves and play from memory.)
+  const videoBlobs = {};
+  function videoSrc(url) { return videoBlobs[url] || url; }
+
   // Line total: for per-piece variants, price × pieces × qty; else price × qty
   function lineTotalOf(variant, qty) {
     if (variant.price === 0) return 0;
@@ -765,9 +771,9 @@
       // frozen video preview collage (first frame, not playing)
       const wideFrame = p.wideFrame || 0.1;
       emojiCell = `<div class="pt-collage pt-collage-v3">
-        <video src="${p.videos[0]}#t=0.5" muted playsinline preload="auto" onerror="cdnFallback(this)"></video>
-        <video src="${p.videos[1]}#t=0.5" muted playsinline preload="auto" onerror="cdnFallback(this)"></video>
-        <video src="${p.videos[2]}#t=${wideFrame}" class="vid-wide" muted playsinline preload="auto" onerror="cdnFallback(this)"></video>
+        <video src="${videoSrc(p.videos[0])}#t=0.5" muted playsinline preload="auto" onerror="cdnFallback(this)"></video>
+        <video src="${videoSrc(p.videos[1])}#t=0.5" muted playsinline preload="auto" onerror="cdnFallback(this)"></video>
+        <video src="${videoSrc(p.videos[2])}#t=${wideFrame}" class="vid-wide" muted playsinline preload="auto" onerror="cdnFallback(this)"></video>
       </div>`;
     } else if (p.photos && p.photos.length >= 4) {
       emojiCell = `<div class="pt-collage">
@@ -859,7 +865,7 @@
     const media = [];
     if (p.videos) p.videos.forEach((v, i) => {
       const poster = (p.posters && p.posters[i]) ? ` poster="${p.posters[i]}"` : "";
-      media.push(`<video src="${v}#t=0.1"${poster} class="pp-gvid" loop muted playsinline preload="auto" onclick="toggleVid(this)" onerror="cdnFallback(this)" onloadeddata="this.classList.add('loaded')"></video>`);
+      media.push(`<video src="${videoSrc(v)}#t=0.1"${poster} class="pp-gvid" loop muted playsinline preload="auto" onclick="toggleVid(this)" onerror="cdnFallback(this)" onloadeddata="this.classList.add('loaded')"></video>`);
     });
     if (p.photos) p.photos.forEach(src => media.push(`<img src="${src}" class="pp-gimg" onerror="this.style.display='none'">`));
     if (media.length) {
@@ -970,22 +976,28 @@
   function prefetchVideos() {
     if (videosPrefetched) return;
     videosPrefetched = true;
-    // Use real hidden <video preload="auto"> elements — this fills the media cache
-    // the same way the tile <img> tags do for the vape photos.
-    const holder = document.createElement("div");
-    holder.style.cssText = "position:absolute;width:0;height:0;overflow:hidden;opacity:0;pointer-events:none";
-    PRODUCTS.forEach(p => {
-      if (!p.videos) return;
-      p.videos.forEach(url => {
-        const v = document.createElement("video");
-        v.src = url;
-        v.preload = "auto";
-        v.muted = true;
-        v.playsInline = true;
-        holder.appendChild(v);
-      });
-    });
-    document.body.appendChild(holder);
+    const urls = [];
+    PRODUCTS.forEach(p => { if (p.videos) p.videos.forEach(u => urls.push(u)); });
+    // download sequentially so we don't saturate the connection
+    (async () => {
+      for (const url of urls) {
+        if (videoBlobs[url]) continue;
+        try {
+          const res = await fetch(url, { cache: "force-cache" });
+          if (!res.ok) continue;
+          const blob = await res.blob();
+          videoBlobs[url] = URL.createObjectURL(blob);
+          // swap into any video element already showing this url
+          document.querySelectorAll("video").forEach(v => {
+            const raw = (v.getAttribute("src") || "").split("#")[0];
+            if (raw === url) {
+              const frag = (v.getAttribute("src") || "").split("#")[1];
+              v.src = videoBlobs[url] + (frag ? "#" + frag : "");
+            }
+          });
+        } catch (e) { /* ignore, falls back to normal URL */ }
+      }
+    })();
   }
 
   function toggleVid(v) {
@@ -1028,12 +1040,17 @@
   // ═══ CART LOGIC ═══
   function addVariant(key) {
     cart[key] = (cart[key] || 0) + 1;
-    refreshVariant(key); updateCartUI();
+    refreshVariant(key); updateCartUI(); refreshCartDrawer();
   }
   function changeVariant(key, delta) {
     cart[key] = Math.max(0, (cart[key] || 0) + delta);
     if (cart[key] === 0) delete cart[key];
-    refreshVariant(key); updateCartUI();
+    refreshVariant(key); updateCartUI(); refreshCartDrawer();
+  }
+  // Re-render the open cart drawer so items, quantities and total stay in sync
+  function refreshCartDrawer() {
+    const drawer = document.getElementById("drawer");
+    if (drawer && drawer.classList.contains("open")) renderCartItems();
   }
   function refreshVariant(key) {
     const addBtn = document.getElementById(`add-${key}`);

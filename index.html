@@ -1048,6 +1048,20 @@
     }, { passive: true });
   })();
   let videoObserver = null;
+  // Pause any video that isn't the mostly-visible one. Cheap, no reflow — safe to
+  // call on every scroll tick so the old video stops the instant you swipe away.
+  function pauseOffscreen() {
+    const vids = document.querySelectorAll(".pp-gvid");
+    const gal = document.querySelector(".pp-gallery");
+    if (!vids.length || !gal) return;
+    const galW = gal.clientWidth, scrollX = gal.scrollLeft;
+    vids.forEach(v => {
+      const left = v.offsetLeft - scrollX;
+      const visW = Math.max(0, Math.min(left + v.offsetWidth, galW) - Math.max(left, 0));
+      const ratio = v.offsetWidth ? visW / v.offsetWidth : 0;
+      if (ratio < 0.6 && !v.paused) v.pause();
+    });
+  }
   function playOnlyVisible() {
     const vids = [...document.querySelectorAll(".pp-gvid")];
     const gal = document.querySelector(".pp-gallery");
@@ -1074,10 +1088,12 @@
   }
   let galScrollTimer = null;
   function onGalleryScroll() {
-    // While the finger is moving we do NOTHING (no layout reads, no play/pause).
-    // Once scrolling settles for 120ms, decide which single video should play.
+    // Pause the video you're leaving immediately (cheap, no reflow, no jitter),
+    // so it doesn't keep playing while you swipe.
+    pauseOffscreen();
+    // Start the newly-centered video shortly after the swipe settles.
     if (galScrollTimer) clearTimeout(galScrollTimer);
-    galScrollTimer = setTimeout(playOnlyVisible, 120);
+    galScrollTimer = setTimeout(playOnlyVisible, 60);
   }
   function setupVideoObserver() {
     const vids = document.querySelectorAll(".pp-gvid");
@@ -1175,6 +1191,16 @@
   }
 
   function toggleVid(v) {
+    // Only the video that's mostly in view responds to taps — ignore the
+    // half-visible neighbours peeking in from the sides.
+    const gal = document.querySelector(".pp-gallery");
+    if (gal) {
+      const left = v.offsetLeft - gal.scrollLeft;
+      const right = left + v.offsetWidth;
+      const visW = Math.max(0, Math.min(right, gal.clientWidth) - Math.max(left, 0));
+      const ratio = v.offsetWidth ? visW / v.offsetWidth : 0;
+      if (ratio < 0.6) return; // not the centered one — ignore the tap
+    }
     if (v.paused) v.play(); else v.pause();
   }
   function toggleMenge() {

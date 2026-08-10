@@ -176,6 +176,9 @@
     .pt-collage-v3 video {
       width: 100%; height: 100%; min-width: 0; min-height: 0;
       object-fit: cover; object-position: center; pointer-events: none; display: block;
+      background: #1a1030;
+    }
+    .pt-collage-v3 video:not(.loaded) {
       background: linear-gradient(135deg, #1a1030 25%, #2a1b4a 50%, #1a1030 75%);
       background-size: 400% 400%;
       animation: vidShimmer 1.6s ease infinite;
@@ -301,12 +304,14 @@
       display: flex; gap: 10px; overflow-x: auto; width: 100%;
       scroll-snap-type: x mandatory; padding: 4px 0 8px; margin-bottom: 4px;
       -webkit-overflow-scrolling: touch;
+      overscroll-behavior-x: contain;
     }
     .pp-gallery::-webkit-scrollbar { height: 0; }
     .pp-gimg {
       width: 240px; height: 240px; object-fit: cover; border-radius: 16px;
       border: 1px solid var(--border); flex-shrink: 0; scroll-snap-align: center;
       background: #000; display: block;
+      transform: translateZ(0);
     }
     .pp-gvid {
       height: 48vh; max-height: 420px; width: auto; max-width: 78vw;
@@ -314,6 +319,11 @@
       border-radius: 18px; border: 1px solid var(--border);
       flex-shrink: 0; scroll-snap-align: center;
       display: block; object-fit: cover; cursor: pointer;
+      background: #1a1030;
+      transform: translateZ(0);
+    }
+    /* shimmer ONLY until the video has data, then it stops (saves GPU while scrolling) */
+    .pp-gvid:not(.loaded) {
       background: linear-gradient(135deg, #1a1030 25%, #2a1b4a 50%, #1a1030 75%);
       background-size: 400% 400%;
       animation: vidShimmer 1.5s ease infinite;
@@ -856,9 +866,9 @@
       // wide bottom video loads as fast as the two on top (a late frame like
       // #t=3 forces downloading the whole clip up to that second).
       emojiCell = `<div class="pt-collage pt-collage-v3">
-        <video src="${videoSrc(p.videos[0])}#t=0.5" class="pt-vid" muted playsinline preload="metadata" onerror="cdnFallback(this)"></video>
-        <video src="${videoSrc(p.videos[1])}#t=0.5" class="pt-vid" muted playsinline preload="metadata" onerror="cdnFallback(this)"></video>
-        <video src="${videoSrc(p.videos[2])}#t=0.5" class="vid-wide pt-vid" muted playsinline preload="metadata" onerror="cdnFallback(this)"></video>
+        <video src="${videoSrc(p.videos[0])}#t=0.5" class="pt-vid" muted playsinline preload="metadata" onerror="cdnFallback(this)" onloadeddata="this.classList.add('loaded')"></video>
+        <video src="${videoSrc(p.videos[1])}#t=0.5" class="pt-vid" muted playsinline preload="metadata" onerror="cdnFallback(this)" onloadeddata="this.classList.add('loaded')"></video>
+        <video src="${videoSrc(p.videos[2])}#t=0.5" class="vid-wide pt-vid" muted playsinline preload="metadata" onerror="cdnFallback(this)" onloadeddata="this.classList.add('loaded')"></video>
       </div>`;
     } else if (p.photos && p.photos.length >= 4) {
       emojiCell = `<div class="pt-collage">
@@ -1042,13 +1052,16 @@
     const vids = [...document.querySelectorAll(".pp-gvid")];
     const gal = document.querySelector(".pp-gallery");
     if (!vids.length || !gal) return;
-    const galRect = gal.getBoundingClientRect();
+    // Use scrollLeft + offsetWidth math instead of getBoundingClientRect on every
+    // element — cheaper and doesn't force a full layout reflow.
+    const galW = gal.clientWidth;
+    const scrollX = gal.scrollLeft;
     let best = null, bestRatio = 0;
     vids.forEach(v => {
-      const r = v.getBoundingClientRect();
-      // visible width within the gallery viewport
-      const visW = Math.max(0, Math.min(r.right, galRect.right) - Math.max(r.left, galRect.left));
-      const ratio = visW / r.width;
+      const left = v.offsetLeft - scrollX;
+      const right = left + v.offsetWidth;
+      const visW = Math.max(0, Math.min(right, galW) - Math.max(left, 0));
+      const ratio = v.offsetWidth ? visW / v.offsetWidth : 0;
       if (ratio > bestRatio) { bestRatio = ratio; best = v; }
     });
     vids.forEach(v => {
@@ -1059,6 +1072,13 @@
       }
     });
   }
+  let galScrollTimer = null;
+  function onGalleryScroll() {
+    // While the finger is moving we do NOTHING (no layout reads, no play/pause).
+    // Once scrolling settles for 120ms, decide which single video should play.
+    if (galScrollTimer) clearTimeout(galScrollTimer);
+    galScrollTimer = setTimeout(playOnlyVisible, 120);
+  }
   function setupVideoObserver() {
     const vids = document.querySelectorAll(".pp-gvid");
     if (!vids.length) return;
@@ -1066,7 +1086,7 @@
     // Don't call load() (causes black re-flash). Just play the first one ASAP.
     const gal = document.querySelector(".pp-gallery");
     if (gal) {
-      gal.onscroll = () => { window.requestAnimationFrame(playOnlyVisible); };
+      gal.onscroll = onGalleryScroll;  // debounced — fires after the swipe stops
     }
     // Play the first video immediately so it shows frames instead of black.
     const first = vids[0];

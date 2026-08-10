@@ -852,12 +852,13 @@
     const big2Line = p.big2 ? `<div class="pt-strain2">${p.big2}</div>` : "";
     let emojiCell;
     if (p.videos && p.videos.length >= 3) {
-      // frozen video preview collage (first frame, not playing)
-      const wideFrame = p.wideFrame || 0.1;
+      // frozen video preview collage — ALL use an early frame (0.5s) so the
+      // wide bottom video loads as fast as the two on top (a late frame like
+      // #t=3 forces downloading the whole clip up to that second).
       emojiCell = `<div class="pt-collage pt-collage-v3">
         <video src="${videoSrc(p.videos[0])}#t=0.5" class="pt-vid" muted playsinline preload="metadata" onerror="cdnFallback(this)"></video>
         <video src="${videoSrc(p.videos[1])}#t=0.5" class="pt-vid" muted playsinline preload="metadata" onerror="cdnFallback(this)"></video>
-        <video src="${videoSrc(p.videos[2])}#t=${wideFrame}" class="vid-wide pt-vid" muted playsinline preload="metadata" onerror="cdnFallback(this)"></video>
+        <video src="${videoSrc(p.videos[2])}#t=0.5" class="vid-wide pt-vid" muted playsinline preload="metadata" onerror="cdnFallback(this)"></video>
       </div>`;
     } else if (p.photos && p.photos.length >= 4) {
       emojiCell = `<div class="pt-collage">

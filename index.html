@@ -317,9 +317,10 @@
     }
     .pp-gallery::-webkit-scrollbar { height: 0; }
     .pp-gimg {
-      width: 240px; height: 240px; object-fit: cover; border-radius: 16px;
-      border: 1px solid var(--border); flex-shrink: 0; scroll-snap-align: center;
-      background: #000; display: block;
+      width: 240px; height: 240px; min-width: 240px; flex: 0 0 240px;
+      object-fit: cover; border-radius: 16px;
+      border: 1px solid var(--border); scroll-snap-align: center;
+      background: var(--surface2); display: block;
       transform: translateZ(0);
     }
     .pp-gvid {
@@ -875,10 +876,10 @@
       </div>`;
     } else if (p.photos && p.photos.length >= 4) {
       emojiCell = `<div class="pt-collage">
-        <img src="${p.photos[0]}" width="35" height="35" loading="eager" fetchpriority="high" decoding="async" onerror="this.style.visibility='hidden'">
-        <img src="${p.photos[1]}" width="35" height="35" loading="eager" fetchpriority="high" decoding="async" onerror="this.style.visibility='hidden'">
-        <img src="${p.photos[2]}" width="35" height="35" loading="eager" fetchpriority="high" decoding="async" onerror="this.style.visibility='hidden'">
-        <img src="${p.photos[3]}" width="35" height="35" loading="eager" fetchpriority="high" decoding="async" onerror="this.style.visibility='hidden'">
+        <img src="${p.photos[0]}" width="35" height="35" loading="eager" fetchpriority="high" decoding="async" onerror="imgFallback(this)">
+        <img src="${p.photos[1]}" width="35" height="35" loading="eager" fetchpriority="high" decoding="async" onerror="imgFallback(this)">
+        <img src="${p.photos[2]}" width="35" height="35" loading="eager" fetchpriority="high" decoding="async" onerror="imgFallback(this)">
+        <img src="${p.photos[3]}" width="35" height="35" loading="eager" fetchpriority="high" decoding="async" onerror="imgFallback(this)">
       </div>`;
     } else {
       emojiCell = `<div class="pt-emoji">${p.emoji}</div>`;
@@ -978,7 +979,7 @@
         : `preload="metadata" fetchpriority="low"`;
       media.push(`<video src="${v}#t=0.1"${poster} class="pp-gvid" loop muted playsinline ${pri} onclick="toggleVid(this)" onerror="cdnFallback(this)" onloadeddata="this.classList.add('loaded')"></video>`);
     });
-    if (p.photos) p.photos.forEach(src => media.push(`<img src="${src}" class="pp-gimg" loading="eager" decoding="async" onerror="this.style.visibility='hidden'">`));
+    if (p.photos) p.photos.forEach(src => media.push(`<img src="${src}" class="pp-gimg" loading="eager" decoding="async" fetchpriority="high" onerror="imgFallback(this)">`));
     if (media.length) {
       const hint = (p.videos ? "← wischen für mehr Videos →" : "← wischen für mehr Bilder →");
       heroMedia = `<div class="pp-gallery">` + media.join("") + `</div><div class="pp-gallery-hint">${hint}</div>`;
@@ -1116,15 +1117,25 @@
     // Play the first video immediately so it shows frames instead of black.
     const first = vids[0];
     if (first) {
+      let kicks = 0;
       const kick = () => {
         // only if the user hasn't scrolled the gallery away from video 1
         if (gal && gal.scrollLeft > 40) { playOnlyVisible(); return; }
-        const pr = first.play(); if (pr && pr.catch) pr.catch(()=>{});
+        const pr = first.play();
+        if (pr && pr.catch) pr.catch(() => {
+          // autoplay refused or not ready — retry a few times
+          if (kicks++ < 8) setTimeout(kick, 250);
+        });
       };
       kick();
-      // if not ready yet, play as soon as it can
-      first.addEventListener("canplay", kick, { once: true });
-      first.addEventListener("loadeddata", kick, { once: true });
+      // fire on every readiness milestone (not once) so a slow load still starts
+      first.addEventListener("canplay", kick);
+      first.addEventListener("loadeddata", kick);
+      first.addEventListener("canplaythrough", kick);
+      // final safety nets for slow PC connections
+      setTimeout(kick, 400);
+      setTimeout(kick, 1000);
+      setTimeout(kick, 2000);
     }
     // ensure only the visible one keeps playing
     setTimeout(playOnlyVisible, 200);
@@ -1142,6 +1153,34 @@
       el.setAttribute("src", raw);
       if (el.tagName === "VIDEO") { try { el.load(); el.play().catch(()=>{}); } catch(e){} }
     }
+  }
+
+  // Image load failed — retry rather than hide, so a collage cell is never blank.
+  // Stage 1: switch jsDelivr -> raw.githubusercontent. Stage 2: cache-bust retry.
+  // Only after both fail do we hide it (very rare).
+  function imgFallback(el) {
+    const stage = parseInt(el.dataset.imgStage || "0", 10);
+    const cur = el.getAttribute("src") || "";
+    if (stage === 0) {
+      el.dataset.imgStage = "1";
+      if (cur.indexOf("cdn.jsdelivr.net/gh/") !== -1) {
+        el.src = cur
+          .replace("https://cdn.jsdelivr.net/gh/", "https://raw.githubusercontent.com/")
+          .replace("@main/", "/main/");
+      } else {
+        // already raw — just cache-bust
+        el.src = cur.split("?")[0] + "?r=" + Date.now();
+      }
+      return;
+    }
+    if (stage === 1) {
+      el.dataset.imgStage = "2";
+      // final retry with a cache-buster on whatever host we're on
+      el.src = cur.split("?")[0] + "?r=" + Date.now();
+      return;
+    }
+    // both retries failed — keep the cell shape, just show the placeholder bg
+    el.style.visibility = "hidden";
   }
 
   // Preload all product videos quietly in the background after unlock,

@@ -650,7 +650,7 @@
         "https://cdn.jsdelivr.net/gh/yardi-tg/my-shop-bot@main/fresh2.mp4",
         "https://cdn.jsdelivr.net/gh/yardi-tg/my-shop-bot@main/fresh3.mp4",
       ],
-      wideFrame: 3,
+      wideFrame: 3.5,
       emoji: "🥶❄️",
       stars: 5,
       import: false,
@@ -678,7 +678,7 @@
         "https://cdn.jsdelivr.net/gh/yardi-tg/my-shop-bot@main/static2.mp4",
         "https://cdn.jsdelivr.net/gh/yardi-tg/my-shop-bot@main/static3.mp4",
       ],
-      wideFrame: 4,
+      wideFrame: 3.5,
       emoji: "2️⃣⚡",
       stars: 4.2,
       import: false,
@@ -871,7 +871,7 @@
       emojiCell = `<div class="pt-collage pt-collage-v3">
         <video src="${p.videos[0]}#t=0.5" class="pt-vid" muted playsinline preload="metadata" fetchpriority="low" onerror="cdnFallback(this)" onloadeddata="this.classList.add('loaded')"></video>
         <video src="${p.videos[1]}#t=0.5" class="pt-vid" muted playsinline preload="metadata" fetchpriority="low" onerror="cdnFallback(this)" onloadeddata="this.classList.add('loaded')"></video>
-        <video src="${p.videos[2]}#t=0.5" class="vid-wide pt-vid" muted playsinline preload="metadata" fetchpriority="low" onerror="cdnFallback(this)" onloadeddata="this.classList.add('loaded')"></video>
+        <video src="${p.videos[2]}#t=0.5" class="vid-wide pt-vid" muted playsinline preload="metadata" fetchpriority="low" onerror="cdnFallback(this)" onloadeddata="this.classList.add('loaded'); try{ var wf=${p.wideFrame ? p.wideFrame : 0}; if(wf>0){ var s=function(){ try{ this.currentTime=wf; }catch(e){} }.bind(this); this.addEventListener('canplay', s, {once:true}); } }catch(e){}"></video>
       </div>`;
     } else if (p.photos && p.photos.length >= 4) {
       emojiCell = `<div class="pt-collage">
@@ -978,7 +978,7 @@
         : `preload="metadata" fetchpriority="low"`;
       media.push(`<video src="${v}#t=0.1"${poster} class="pp-gvid" loop muted playsinline ${pri} onclick="toggleVid(this)" onerror="cdnFallback(this)" onloadeddata="this.classList.add('loaded')"></video>`);
     });
-    if (p.photos) p.photos.forEach(src => media.push(`<img src="${src}" class="pp-gimg" onerror="this.style.display='none'">`));
+    if (p.photos) p.photos.forEach(src => media.push(`<img src="${src}" class="pp-gimg" loading="eager" decoding="async" onerror="this.style.visibility='hidden'">`));
     if (media.length) {
       const hint = (p.videos ? "← wischen für mehr Videos →" : "← wischen für mehr Bilder →");
       heroMedia = `<div class="pp-gallery">` + media.join("") + `</div><div class="pp-gallery-hint">${hint}</div>`;

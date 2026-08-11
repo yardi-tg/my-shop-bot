@@ -14,7 +14,7 @@ const SHOP_URL = "https://my-shop-bot.vercel.app";
 const CONTACT_URL   = "https://t.me/mi1lord9";
 const INSTAGRAM_URL = "https://www.instagram.com/plakzzy";
 const SIGNAL_URL    = "https://signal.me/#eu/iv1BpOKjaVrggSDgYIcz0IgeK0AKiw0NSBmtb73uNGYcL1DPrW5L35GeC02okV-x";
-const THREEMA_URL   = ""; // <-- Threema-Link hier später eintragen, z.B. "https://threema.id/XXXXXXXX"
+const THREEMA_URL   = "https://threema.id/BV3UYVAP"; // Threema-Link
 // ════════════════════════════════════════════════
 
 const TELEGRAM_API = `https://api.telegram.org/bot${BOT_TOKEN}`;
@@ -95,12 +95,13 @@ async function sendWelcomeMenu(chatId) {
   }
 
   const text =
-    `✨ <b>Willkommen bei Blocktheke</b> Est.2021 — Zuverlässiger Service &amp; Qualität.\n` +
-    `Ein Team, dem zufriedene Kunden über alles geht.\n\n` +
-    `🔑 <b>So bekommst du Zugang:</b> clicke /code\n\n` +
+    `✨ <b>Willkommen bei Blocktheke</b>\n` +
+    `<i>Est. 2021 — Zuverlässiger Service &amp; Qualität</i>\n\n` +
+    `Ein Team, dem zufriedene Kunden über alles gehen.\n\n` +
     `✅ Preisleistung &amp; hohe Qualität\n` +
     `⚡ Schnelle &amp; diskrete Abwicklung\n` +
     `🤝 Ehrlicher, zuverlässiger Service\n\n` +
+    `🔑 <b>Zugang:</b> clicke /code\n\n` +
     `👇 Wähle unten eine Option:`;
 
   const res = await fetch(`${TELEGRAM_API}/sendMessage`, {

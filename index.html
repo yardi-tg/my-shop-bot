@@ -7,6 +7,11 @@
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="preload" as="image" href="https://cdn.jsdelivr.net/gh/yardi-tg/my-shop-bot@main/vape1.jpg" fetchpriority="high">
+  <link rel="preload" as="image" href="https://cdn.jsdelivr.net/gh/yardi-tg/my-shop-bot@main/vape2.jpg">
+  <link rel="preload" as="image" href="https://cdn.jsdelivr.net/gh/yardi-tg/my-shop-bot@main/vape3.jpg">
+  <link rel="preload" as="image" href="https://cdn.jsdelivr.net/gh/yardi-tg/my-shop-bot@main/vape4.jpg">
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
     :root {
@@ -325,6 +330,8 @@
       display: block; object-fit: cover; cursor: pointer;
       background: #1a1030;
       transform: translateZ(0);
+      backface-visibility: hidden;
+      contain: layout paint;
     }
     /* shimmer ONLY until the video has data, then it stops (saves GPU while scrolling) */
     .pp-gvid:not(.loaded) {
@@ -749,7 +756,7 @@
       requestAnimationFrame(draw);
     }
     draw();
-    setTimeout(() => { running = false; shatterScreen(canvas); }, 4000);
+    setTimeout(() => { running = false; shatterScreen(canvas); }, 3000);
   }
 
   function shatterScreen(canvas) {
@@ -862,16 +869,16 @@
       // wide bottom video loads as fast as the two on top (a late frame like
       // #t=3 forces downloading the whole clip up to that second).
       emojiCell = `<div class="pt-collage pt-collage-v3">
-        <video src="${p.videos[0]}#t=0.5" class="pt-vid" muted playsinline preload="metadata" onerror="cdnFallback(this)" onloadeddata="this.classList.add('loaded')"></video>
-        <video src="${p.videos[1]}#t=0.5" class="pt-vid" muted playsinline preload="metadata" onerror="cdnFallback(this)" onloadeddata="this.classList.add('loaded')"></video>
-        <video src="${p.videos[2]}#t=0.5" class="vid-wide pt-vid" muted playsinline preload="metadata" onerror="cdnFallback(this)" onloadeddata="this.classList.add('loaded')"></video>
+        <video src="${p.videos[0]}#t=0.5" class="pt-vid" muted playsinline preload="metadata" fetchpriority="low" onerror="cdnFallback(this)" onloadeddata="this.classList.add('loaded')"></video>
+        <video src="${p.videos[1]}#t=0.5" class="pt-vid" muted playsinline preload="metadata" fetchpriority="low" onerror="cdnFallback(this)" onloadeddata="this.classList.add('loaded')"></video>
+        <video src="${p.videos[2]}#t=0.5" class="vid-wide pt-vid" muted playsinline preload="metadata" fetchpriority="low" onerror="cdnFallback(this)" onloadeddata="this.classList.add('loaded')"></video>
       </div>`;
     } else if (p.photos && p.photos.length >= 4) {
       emojiCell = `<div class="pt-collage">
-        <img src="${p.photos[0]}" loading="eager" onerror="this.style.visibility='hidden'">
-        <img src="${p.photos[1]}" loading="eager" onerror="this.style.visibility='hidden'">
-        <img src="${p.photos[2]}" loading="eager" onerror="this.style.visibility='hidden'">
-        <img src="${p.photos[3]}" loading="eager" onerror="this.style.visibility='hidden'">
+        <img src="${p.photos[0]}" width="35" height="35" loading="eager" fetchpriority="high" decoding="async" onerror="this.style.visibility='hidden'">
+        <img src="${p.photos[1]}" width="35" height="35" loading="eager" fetchpriority="high" decoding="async" onerror="this.style.visibility='hidden'">
+        <img src="${p.photos[2]}" width="35" height="35" loading="eager" fetchpriority="high" decoding="async" onerror="this.style.visibility='hidden'">
+        <img src="${p.photos[3]}" width="35" height="35" loading="eager" fetchpriority="high" decoding="async" onerror="this.style.visibility='hidden'">
       </div>`;
     } else {
       emojiCell = `<div class="pt-emoji">${p.emoji}</div>`;
@@ -964,7 +971,12 @@
     const media = [];
     if (p.videos) p.videos.forEach((v, i) => {
       const poster = (p.posters && p.posters[i]) ? ` poster="${p.posters[i]}"` : "";
-      media.push(`<video src="${v}#t=0.1"${poster} class="pp-gvid" loop muted playsinline preload="auto" onclick="toggleVid(this)" onerror="cdnFallback(this)" onloadeddata="this.classList.add('loaded')"></video>`);
+      // The first video is what the user sees on open -> load it eagerly & fast.
+      // The others wait (metadata only) until the user swipes to them.
+      const pri = i === 0
+        ? `preload="auto" fetchpriority="high"`
+        : `preload="metadata" fetchpriority="low"`;
+      media.push(`<video src="${v}#t=0.1"${poster} class="pp-gvid" loop muted playsinline ${pri} onclick="toggleVid(this)" onerror="cdnFallback(this)" onloadeddata="this.classList.add('loaded')"></video>`);
     });
     if (p.photos) p.photos.forEach(src => media.push(`<img src="${src}" class="pp-gimg" onerror="this.style.display='none'">`));
     if (media.length) {
@@ -1082,14 +1094,15 @@
       }
     });
   }
+  // During an active swipe we do NOTHING that touches layout — that was the
+  // jitter. We only act 90ms AFTER scrolling stops (professional debounce).
   let galScrollTimer = null;
   function onGalleryScroll() {
-    // Pause the video you're leaving immediately (cheap, no reflow, no jitter),
-    // so it doesn't keep playing while you swipe.
-    pauseOffscreen();
-    // Start the newly-centered video shortly after the swipe settles.
     if (galScrollTimer) clearTimeout(galScrollTimer);
-    galScrollTimer = setTimeout(playOnlyVisible, 60);
+    galScrollTimer = setTimeout(() => {
+      pauseOffscreen();
+      playOnlyVisible();
+    }, 90);
   }
   function setupVideoObserver() {
     const vids = document.querySelectorAll(".pp-gvid");

@@ -7,7 +7,7 @@ app.use(express.json());
 
 // ════════════════════════════════════════════════
 const BOT_TOKEN = process.env.BOT_TOKEN;
-const YOUR_CHAT_ID = "8551836923";
+const YOUR_CHAT_ID = "8504029528";
 const SHOP_URL = "https://my-shop-bot.vercel.app";
 
 // ── Kontakt- & Social-Links (hier später anpassen) ──
@@ -190,7 +190,15 @@ app.post("/webhook", async (req, res) => {
       if (data === "get_code" && cbChatId) {
         await handleCodeRequest(cbChatId);
       } else if (data === "back_to_menu" && cbChatId) {
-        await sendWelcomeMenu(cbChatId);
+        // Die Nachricht zurückziehen (löschen), statt eine neue zu senden
+        const msgId = cq.message?.message_id;
+        if (msgId) {
+          await fetch(`${TELEGRAM_API}/deleteMessage`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ chat_id: cbChatId, message_id: msgId }),
+          });
+        }
       }
       return res.json({ ok: true });
     }

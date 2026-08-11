@@ -83,21 +83,23 @@ async function sendWelcomeMenu(chatId) {
   // Reihe 3: Zugangscode anfragen (löst dieselbe /code-Logik aus)
   inline_keyboard.push([{ text: "🔑 Zugangscode (/code)", callback_data: "get_code" }]);
 
-  // Reihe 4: Instagram + Signal nebeneinander
-  inline_keyboard.push([
-    { text: "📸 Instagram", url: INSTAGRAM_URL },
+  // Reihe 4: Signal + Threema nebeneinander
+  const row4 = [
     { text: "🔵 Signal", url: SIGNAL_URL },
-  ]);
-
-  // Reihe 5: Threema + Snapchat nebeneinander
-  const row5 = [];
+  ];
   if (THREEMA_URL && THREEMA_URL.trim() !== "") {
-    row5.push({ text: "🔒 Threema", url: THREEMA_URL });
+    row4.push({ text: "🔒 Threema", url: THREEMA_URL });
   }
+  inline_keyboard.push(row4);
+
+  // Reihe 5: Instagram + Snapchat nebeneinander
+  const row5 = [
+    { text: "📸 Instagram", url: INSTAGRAM_URL },
+  ];
   if (SNAPCHAT_URL && SNAPCHAT_URL.trim() !== "") {
     row5.push({ text: "👻 Snapchat", url: SNAPCHAT_URL });
   }
-  if (row5.length) inline_keyboard.push(row5);
+  inline_keyboard.push(row5);
 
   const text =
     `✨ <b>Willkommen bei Blocktheke</b>\n` +
@@ -106,7 +108,9 @@ async function sendWelcomeMenu(chatId) {
     `✅ Preisleistung &amp; hohe Qualität\n` +
     `⚡ Schnelle &amp; diskrete Abwicklung\n` +
     `🤝 Ehrlicher, zuverlässiger Service\n\n` +
-    `🔑 <b>Zugang:</b> clicke /code\n\n` +
+    `🔒 <b>Zugangscode erforderlich</b>\n` +
+    `Der Shop ist privat — ohne heutigen Zugangscode kommst du nicht rein. ` +
+    `Tippe auf <b>🔑 Zugangscode</b> oder schreibe /code, um ihn anzufragen.\n\n` +
     `👇 Wähle unten eine Option:`;
 
   const res = await fetch(`${TELEGRAM_API}/sendMessage`, {
@@ -247,6 +251,7 @@ app.post("/webhook", async (req, res) => {
     }
 
     if (text === "/start") {
+      setShopMenuButton(); // Button sicherheitshalber (neu) setzen
       await sendWelcomeMenu(chatId);
     } else if (text === "/menu") {
       await sendWithShopButton(

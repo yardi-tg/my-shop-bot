@@ -9,6 +9,12 @@ app.use(express.json());
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const YOUR_CHAT_ID = "8551836923";
 const SHOP_URL = "https://my-shop-bot.vercel.app";
+
+// ── Kontakt- & Social-Links (hier später anpassen) ──
+const CONTACT_URL   = "https://t.me/mi1lord9";
+const INSTAGRAM_URL = "https://www.instagram.com/plakzzy";
+const SIGNAL_URL    = "https://signal.me/#eu/iv1BpOKjaVrggSDgYIcz0IgeK0AKiw0NSBmtb73uNGYcL1DPrW5L35GeC02okV-x";
+const THREEMA_URL   = ""; // <-- Threema-Link hier später eintragen, z.B. "https://threema.id/XXXXXXXX"
 // ════════════════════════════════════════════════
 
 const TELEGRAM_API = `https://api.telegram.org/bot${BOT_TOKEN}`;
@@ -63,6 +69,52 @@ async function sendWithShopButton(chatId, text, buttonLabel) {
   return res.json();
 }
 
+// ── Willkommens-Menü nach /start (Text + Buttons) ─────────────
+async function sendWelcomeMenu(chatId) {
+  // Reihe 1: Shop öffnen (großer Web-App-Button)
+  const inline_keyboard = [
+    [{ text: "🛒 Shop öffnen", web_app: { url: SHOP_URL } }],
+  ];
+
+  // Reihe 2: Kontakt (Telegram)
+  inline_keyboard.push([{ text: "💬 Kontakt", url: CONTACT_URL }]);
+
+  // Reihe 3: Instagram + Signal nebeneinander
+  const socialRow = [
+    { text: "📸 Instagram", url: INSTAGRAM_URL },
+    { text: "🔵 Signal", url: SIGNAL_URL },
+  ];
+  inline_keyboard.push(socialRow);
+
+  // Reihe 4: Threema (nur anzeigen, wenn Link gesetzt ist)
+  if (THREEMA_URL && THREEMA_URL.trim() !== "") {
+    inline_keyboard.push([{ text: "🔒 Threema", url: THREEMA_URL }]);
+  }
+
+  const text =
+    `✨ <b>Willkommen bei Blocktheke</b>\n` +
+    `<i>Seit 2021 — Vertrauen, Diskretion & Qualität.</i>\n\n` +
+    `Ein eingespieltes Team, dem zufriedene Kunden über alles gehen.\n\n` +
+    `✅ Gleichbleibend hohe Qualität\n` +
+    `⚡ Schnelle & diskrete Abwicklung\n` +
+    `🤝 Ehrlicher, zuverlässiger Service\n\n` +
+    `🔑 <b>Zugang:</b> Tippe auf „Shop öffnen“ und gib deinen Zugangscode ein. ` +
+    `Keinen Code? Schreibe <b>/code</b> oder kontaktiere uns.\n\n` +
+    `👇 Wähle unten eine Option:`;
+
+  const res = await fetch(`${TELEGRAM_API}/sendMessage`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      chat_id: chatId,
+      text,
+      parse_mode: "HTML",
+      reply_markup: { inline_keyboard }
+    }),
+  });
+  return res.json();
+}
+
 // ── Daily access code generator ───────────────────────────────
 function getTodaysCode() {
   const today = new Date().toISOString().slice(0, 10);
@@ -112,26 +164,12 @@ app.post("/webhook", async (req, res) => {
     }
 
     if (text === "/start") {
-      await sendWithShopButton(
-        chatId,
-        `👋🏼 <b>Willkommen bei Blocktheke!</b>\n` +
-        `<i>Deine Strassenapotheke.</i>\n\n` +
-        `🥦 Frisches Gemüse in Top-Qualität – direkt zu dir.\n\n` +
-        `<b>Warum Blocktheke?</b>\n` +
-        `✅ Beste Preisleistung weit und breit\n` +
-        `✅ Blitzschneller Service\n` +
-        `✅ Immer frische Ware\n` +
-        `✅ Diskret & zuverlässig\n\n` +
-        `🔑 <b>So bekommst du Zugang:</b>\n` +
-        `Schreibe <b>/code</b> und wir senden dir den heutigen Zugangscode.\n\n` +
-        `👇🏼 Tippe unten, um den Shop zu öffnen:`,
-        "🛍️ Shop öffnen"
-      );
+      await sendWelcomeMenu(chatId);
     } else if (text === "/menu") {
       await sendWithShopButton(
         chatId,
-        `🍔 <b>Unser Menü ist bereit!</b>\n\nTippe unten, um alles zu sehen, was wir anbieten:`,
-        "🛍️ Menü ansehen"
+        `🛒 <b>Bereit zum Stöbern?</b>\n\nTippe unten, um den Shop zu öffnen:`,
+        "🛒 Shop öffnen"
       );
     } else if (text === "/code") {
       if (String(chatId) === String(YOUR_CHAT_ID)) {
@@ -140,16 +178,16 @@ app.post("/webhook", async (req, res) => {
         );
       } else {
         // Send message with button to contact owner directly
-        const res = await fetch(`${TELEGRAM_API}/sendMessage`, {
+        await fetch(`${TELEGRAM_API}/sendMessage`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             chat_id: chatId,
-            text: `🔒 <b>Zugang erforderlich</b>\n\nDieser Shop ist privat. Um den heutigen Zugangscode zu erhalten, kontaktiere den Shopinhaber direkt!`,
+            text: `🔒 <b>Zugang erforderlich</b>\n\nDieser Shop ist privat. Um den heutigen Zugangscode zu erhalten, kontaktiere uns direkt!`,
             parse_mode: "HTML",
             reply_markup: {
               inline_keyboard: [[
-                { text: "💬 Shopinhaber kontaktieren", url: "https://t.me/Standonbu51ness?text=" + encodeURIComponent("Hallo! Ich möchte gerne auf Blocktheke zugreifen. Kann ich den heutigen Code bekommen? 🛍️") }
+                { text: "💬 Kontakt aufnehmen", url: CONTACT_URL + "?text=" + encodeURIComponent("Hallo! Ich möchte gerne auf Blocktheke zugreifen. Kann ich den heutigen Code bekommen? 🛒") }
               ]]
             }
           })
@@ -158,19 +196,11 @@ app.post("/webhook", async (req, res) => {
     } else if (text === "/contact") {
       await sendTelegramMessage(
         chatId,
-        `📞 <b>Kontakt</b>\n\nHast du eine Frage oder brauchst du Hilfe bei deiner Bestellung?\nSchreib uns einfach eine Nachricht und wir melden uns so schnell wie möglich! 🙏`
+        `📞 <b>Kontakt</b>\n\nHast du eine Frage oder brauchst du Hilfe bei deiner Bestellung?\nSchreib uns einfach und wir melden uns so schnell wie möglich! 🙏`
       );
     } else {
-      await sendWithShopButton(
-        chatId,
-        `😊 Hey ${firstName}! Verwende diese Befehle:\n\n` +
-        `/start — Willkommen & Shop öffnen\n` +
-        `/menu — Unser Menü ansehen\n` +
-        `/code — Heutigen Zugangscode erhalten\n` +
-        `/contact — Kontakt aufnehmen\n\n` +
-        `Oder tippe einfach auf den Button unten:`,
-        "🛍️ Shop öffnen"
-      );
+      // Bei jeder anderen Nachricht: das Willkommens-Menü zeigen
+      await sendWelcomeMenu(chatId);
     }
 
     res.json({ ok: true });
@@ -205,7 +235,7 @@ app.post("/order", async (req, res) => {
       await sendWithShopButton(
         order.user.id,
         `✅ <b>Bestellung erhalten!</b>\n\nDanke ${user.name || ""}! Wir haben deine Bestellung erhalten und melden uns in Kürze! 🙏`,
-        "🛍️ Nochmal bestellen"
+        "🛒 Nochmal bestellen"
       );
     }
     res.json({ success: true });

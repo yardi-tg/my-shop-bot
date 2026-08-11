@@ -8,10 +8,6 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-  <link rel="preload" as="image" href="https://cdn.jsdelivr.net/gh/yardi-tg/my-shop-bot@main/vape1.jpg" fetchpriority="high">
-  <link rel="preload" as="image" href="https://cdn.jsdelivr.net/gh/yardi-tg/my-shop-bot@main/vape2.jpg">
-  <link rel="preload" as="image" href="https://cdn.jsdelivr.net/gh/yardi-tg/my-shop-bot@main/vape3.jpg">
-  <link rel="preload" as="image" href="https://cdn.jsdelivr.net/gh/yardi-tg/my-shop-bot@main/vape4.jpg">
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
     :root {
@@ -317,11 +313,9 @@
     }
     .pp-gallery::-webkit-scrollbar { height: 0; }
     .pp-gimg {
-      width: 240px; height: 240px; min-width: 240px; flex: 0 0 240px;
-      object-fit: cover; border-radius: 16px;
-      border: 1px solid var(--border); scroll-snap-align: center;
+      width: 240px; height: 240px; object-fit: cover; border-radius: 16px;
+      border: 1px solid var(--border); flex-shrink: 0; scroll-snap-align: center;
       background: var(--surface2); display: block;
-      transform: translateZ(0);
     }
     .pp-gvid {
       height: 48vh; max-height: 420px; width: auto; max-width: 78vw;
@@ -331,8 +325,6 @@
       display: block; object-fit: cover; cursor: pointer;
       background: #1a1030;
       transform: translateZ(0);
-      backface-visibility: hidden;
-      contain: layout paint;
     }
     /* shimmer ONLY until the video has data, then it stops (saves GPU while scrolling) */
     .pp-gvid:not(.loaded) {
@@ -586,7 +578,6 @@
         "https://cdn.jsdelivr.net/gh/yardi-tg/my-shop-bot@main/cali3.mp4",
         "https://cdn.jsdelivr.net/gh/yardi-tg/my-shop-bot@main/cali4.mp4",
       ],
-      wideFrame: 3,
       emoji: "🧙‍♂️🌲",
       stars: 4.5,
       import: true,
@@ -870,16 +861,16 @@
       // wide bottom video loads as fast as the two on top (a late frame like
       // #t=3 forces downloading the whole clip up to that second).
       emojiCell = `<div class="pt-collage pt-collage-v3">
-        <video src="${p.videos[0]}#t=0.5" class="pt-vid" muted playsinline preload="metadata" fetchpriority="low" onerror="cdnFallback(this)" onloadeddata="this.classList.add('loaded')"></video>
-        <video src="${p.videos[1]}#t=0.5" class="pt-vid" muted playsinline preload="metadata" fetchpriority="low" onerror="cdnFallback(this)" onloadeddata="this.classList.add('loaded')"></video>
-        <video src="${p.videos[2]}#t=0.5" class="vid-wide pt-vid" muted playsinline preload="metadata" fetchpriority="low" onerror="cdnFallback(this)" onloadeddata="this.classList.add('loaded'); try{ var wf=${p.wideFrame ? p.wideFrame : 0}; if(wf>0){ var s=function(){ try{ this.currentTime=wf; }catch(e){} }.bind(this); this.addEventListener('canplay', s, {once:true}); } }catch(e){}"></video>
+        <video src="${p.videos[0]}#t=0.5" class="pt-vid" muted playsinline preload="metadata" onerror="cdnFallback(this)" onloadeddata="this.classList.add('loaded')"></video>
+        <video src="${p.videos[1]}#t=0.5" class="pt-vid" muted playsinline preload="metadata" onerror="cdnFallback(this)" onloadeddata="this.classList.add('loaded')"></video>
+        <video src="${p.videos[2]}#t=0.5" class="vid-wide pt-vid" muted playsinline preload="metadata" onerror="cdnFallback(this)" onloadeddata="this.classList.add('loaded'); try{ var wf=${p.wideFrame ? p.wideFrame : 0}; if(wf>0){ var s=function(){ try{ this.currentTime=wf; }catch(e){} }.bind(this); this.addEventListener('canplay', s, {once:true}); } }catch(e){}"></video>
       </div>`;
     } else if (p.photos && p.photos.length >= 4) {
       emojiCell = `<div class="pt-collage">
-        <img src="${p.photos[0]}" width="35" height="35" loading="eager" fetchpriority="high" decoding="async" onerror="imgFallback(this)">
-        <img src="${p.photos[1]}" width="35" height="35" loading="eager" fetchpriority="high" decoding="async" onerror="imgFallback(this)">
-        <img src="${p.photos[2]}" width="35" height="35" loading="eager" fetchpriority="high" decoding="async" onerror="imgFallback(this)">
-        <img src="${p.photos[3]}" width="35" height="35" loading="eager" fetchpriority="high" decoding="async" onerror="imgFallback(this)">
+        <img src="${p.photos[0]}" width="35" height="35" loading="eager" onerror="imgFallback(this)">
+        <img src="${p.photos[1]}" width="35" height="35" loading="eager" onerror="imgFallback(this)">
+        <img src="${p.photos[2]}" width="35" height="35" loading="eager" onerror="imgFallback(this)">
+        <img src="${p.photos[3]}" width="35" height="35" loading="eager" onerror="imgFallback(this)">
       </div>`;
     } else {
       emojiCell = `<div class="pt-emoji">${p.emoji}</div>`;
@@ -974,12 +965,10 @@
       const poster = (p.posters && p.posters[i]) ? ` poster="${p.posters[i]}"` : "";
       // The first video is what the user sees on open -> load it eagerly & fast.
       // The others wait (metadata only) until the user swipes to them.
-      const pri = i === 0
-        ? `preload="auto" fetchpriority="high"`
-        : `preload="metadata" fetchpriority="low"`;
+      const pri = i === 0 ? `preload="auto"` : `preload="metadata"`;
       media.push(`<video src="${v}#t=0.1"${poster} class="pp-gvid" loop muted playsinline ${pri} onclick="toggleVid(this)" onerror="cdnFallback(this)" onloadeddata="this.classList.add('loaded')"></video>`);
     });
-    if (p.photos) p.photos.forEach(src => media.push(`<img src="${src}" class="pp-gimg" loading="eager" decoding="async" fetchpriority="high" onerror="imgFallback(this)">`));
+    if (p.photos) p.photos.forEach(src => media.push(`<img src="${src}" class="pp-gimg" loading="eager" onerror="imgFallback(this)">`));
     if (media.length) {
       const hint = (p.videos ? "← wischen für mehr Videos →" : "← wischen für mehr Bilder →");
       heroMedia = `<div class="pp-gallery">` + media.join("") + `</div><div class="pp-gallery-hint">${hint}</div>`;

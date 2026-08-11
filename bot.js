@@ -95,14 +95,12 @@ async function sendWelcomeMenu(chatId) {
   }
 
   const text =
-    `✨ <b>Willkommen bei Blocktheke</b>\n` +
-    `<i>Seit 2021 — Vertrauen, Diskretion & Qualität.</i>\n\n` +
-    `Ein eingespieltes Team, dem zufriedene Kunden über alles gehen.\n\n` +
-    `✅ Gleichbleibend hohe Qualität\n` +
-    `⚡ Schnelle & diskrete Abwicklung\n` +
+    `✨ <b>Willkommen bei Blocktheke</b> Est.2021 — Zuverlässiger Service &amp; Qualität.\n` +
+    `Ein Team, dem zufriedene Kunden über alles geht.\n\n` +
+    `🔑 <b>So bekommst du Zugang:</b> clicke /code\n\n` +
+    `✅ Preisleistung &amp; hohe Qualität\n` +
+    `⚡ Schnelle &amp; diskrete Abwicklung\n` +
     `🤝 Ehrlicher, zuverlässiger Service\n\n` +
-    `🔑 <b>Zugang:</b> Tippe auf „Shop öffnen“ und gib deinen Zugangscode ein. ` +
-    `Keinen Code? Schreibe <b>/code</b> oder kontaktiere uns.\n\n` +
     `👇 Wähle unten eine Option:`;
 
   const res = await fetch(`${TELEGRAM_API}/sendMessage`, {

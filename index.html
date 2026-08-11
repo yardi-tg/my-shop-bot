@@ -731,6 +731,51 @@
   document.getElementById("unlockBtn").addEventListener("click", checkAccessCode);
   document.getElementById("codeInput").addEventListener("keypress", (e) => { if (e.key === "Enter") checkAccessCode(); });
 
+  // Resolves once every product's FIRST video is downloaded and all tile
+  // previews (photos + preview videos) have their picture — capped so a slow
+  // connection can never trap the user on the matrix screen.
+  function mediaReadyPromise(maxWaitMs) {
+    const firstVideos = PRODUCTS.filter(p => p.videos && p.videos.length).map(p => p.videos[0]);
+    const imgs = [...document.querySelectorAll(".pt-collage img")];
+    const tileVids = [...document.querySelectorAll("video.pt-vid")];
+    return new Promise(resolve => {
+      let settled = false;
+      const finish = () => { if (!settled) { settled = true; resolve(); } };
+      const guard = setTimeout(finish, maxWaitMs);
+
+      // Per-item waiter that can never hang: counts an item as done if it is
+      // already loaded, already failed, or once its event fires (with a cap).
+      const waitFor = (el, readyNow, events) => {
+        if (readyNow()) return Promise.resolve();
+        return new Promise(r => {
+          const done = () => r();
+          events.forEach(ev => el.addEventListener(ev, done, { once: true }));
+          setTimeout(done, maxWaitMs); // hard stop for this item
+        });
+      };
+
+      const imgReady = Promise.all(imgs.map(im =>
+        waitFor(im, () => im.complete || im.naturalWidth > 0, ["load", "error"])
+      ));
+      const vidReady = Promise.all(tileVids.map(v =>
+        // readyState >= 1 means it has metadata; v.error means it already failed
+        waitFor(v, () => v.readyState >= 1 || !!v.error, ["loadeddata", "loadedmetadata", "error"])
+      ));
+      const blobReady = new Promise(r => {
+        const tick = () => {
+          if (settled || firstVideos.every(u => videoBlobs[u])) return r();
+          setTimeout(tick, 120);
+        };
+        tick();
+      });
+
+      Promise.all([imgReady, vidReady, blobReady]).then(() => {
+        clearTimeout(guard);
+        finish();
+      });
+    });
+  }
+
   function startMatrixSequence() {
     const canvas = document.getElementById("matrixCanvas");
     const ctx = canvas.getContext("2d");
@@ -755,7 +800,12 @@
       requestAnimationFrame(draw);
     }
     draw();
-    setTimeout(() => { running = false; shatterScreen(canvas); }, 2000);
+    // Keep the rain going until the media is actually ready (min 2s so it always
+    // looks intentional, max 9s so a bad connection can't stall the shop).
+    const minShow = new Promise(r => setTimeout(r, 2000));
+    Promise.all([minShow, mediaReadyPromise(9000)]).then(() => {
+      running = false; shatterScreen(canvas);
+    });
   }
 
   function shatterScreen(canvas) {
@@ -1149,9 +1199,31 @@
   function prefetchVideos() {
     if (videosPrefetched) return;
     videosPrefetched = true;
+    // Photos are small — pull them into cache first so no collage cell stays blank.
+    PRODUCTS.forEach(p => {
+      if (!p.photos) return;
+      p.photos.forEach(u => { const im = new Image(); im.src = u; });
+    });
     // Priority order: first video of each product first (that's what opens first),
     // then the rest. Download them in parallel — no duplicate <video> requests now.
     const firsts = [], rest = [];
+    PRODUCTS.forEach(p => {
+      if (!p.videos) return;
+      p.videos.forEach((u, i) => (i === 0 ? firsts : rest).push(u));
+    });
+    // Run at most N downloads at a time. Firing 10 fetches at once used to eat
+    // every free connection to the CDN and starve the collage images — that's
+    // why a tile photo could stay blank.
+    const runThrottled = async (urls, limit) => {
+      let idx = 0;
+      const workers = Array.from({ length: Math.min(limit, urls.length) }, async () => {
+        while (idx < urls.length) {
+          const url = urls[idx++];
+          await grab(url);
+        }
+      });
+      await Promise.all(workers);
+    };
     PRODUCTS.forEach(p => {
       if (!p.videos) return;
       p.videos.forEach((u, i) => (i === 0 ? firsts : rest).push(u));
@@ -1163,47 +1235,60 @@
         if (!res.ok) return;
         const blob = await res.blob();
         videoBlobs[url] = URL.createObjectURL(blob);
-        // Swap the ready blob into matching gallery videos — but NEVER disrupt one
-        // that's currently on screen / playing (that caused the "reloads and stops"
-        // feeling). Only swap videos that are still paused AND off the current view.
+        // Swap the ready blob in. Protect only videos that would actually be
+        // disrupted: ones that are playing, or that already have picture data.
+        // A blank/greyed video (readyState < 2) MUST be upgraded — that was the
+        // cause of the grey shimmer sticking around on the product page.
         document.querySelectorAll("video.pp-gvid").forEach(v => {
           const cur = v.getAttribute("src") || "";
           const raw = cur.split("#")[0];
           if (raw !== url) return;
-          if (cur.startsWith("blob:")) return;          // already swapped
-          if (!v.paused) return;                         // don't touch a playing video
-          const gal = v.closest(".pp-gallery");
-          if (gal) {                                     // skip the one in view
-            const left = v.offsetLeft - gal.scrollLeft;
-            const visW = Math.max(0, Math.min(left + v.offsetWidth, gal.clientWidth) - Math.max(left, 0));
-            if (v.offsetWidth && visW / v.offsetWidth >= 0.6) return;
-          }
+          if (cur.startsWith("blob:")) return;   // already swapped
+          if (!v.paused) return;                 // currently playing — leave alone
+          if (v.readyState >= 2) return;         // already showing frames — no need
           const frag = cur.split("#")[1];
           v.src = videoBlobs[url] + (frag ? "#" + frag : "");
           v.preload = "auto";
           try { v.load(); } catch (e) {}
+          // if this one is the centred video, start it once it's ready
+          const gal = v.closest(".pp-gallery");
+          if (gal) {
+            const left = v.offsetLeft - gal.scrollLeft;
+            const visW = Math.max(0, Math.min(left + v.offsetWidth, gal.clientWidth) - Math.max(left, 0));
+            if (v.offsetWidth && visW / v.offsetWidth >= 0.6) {
+              v.addEventListener("loadeddata", () => { const pr = v.play(); if (pr && pr.catch) pr.catch(()=>{}); }, { once: true });
+            }
+          }
         });
       } catch (e) { /* falls back to the normal URL */ }
     };
-    // Let the tile preview frames load first, then start the heavy downloads.
+    // Let the small stuff finish first: collage photos AND tile preview frames.
+    // Only then start the heavy video downloads, and never more than 3 at once,
+    // so images are never starved of connections.
     const tiles = [...document.querySelectorAll("video.pt-vid")];
-    const tileReady = new Promise(resolve => {
-      if (!tiles.length) return resolve();
-      let left = tiles.length;
-      const done = () => { if (--left <= 0) resolve(); };
-      tiles.forEach(v => {
-        if (v.readyState >= 1) done();
-        else {
-          v.addEventListener("loadedmetadata", done, { once: true });
-          v.addEventListener("error", done, { once: true });
-        }
-      });
-      setTimeout(resolve, 1500); // never wait longer than this
+    const smallStuffReady = new Promise(resolve => {
+      const imgs = [...document.querySelectorAll(".pt-collage img")];
+      const items = [];
+      imgs.forEach(im => items.push(
+        (im.complete || im.naturalWidth > 0) ? Promise.resolve() : new Promise(r => {
+          im.addEventListener("load", r, { once: true });
+          im.addEventListener("error", r, { once: true });
+        })
+      ));
+      tiles.forEach(v => items.push(
+        (v.readyState >= 1 || v.error) ? Promise.resolve() : new Promise(r => {
+          v.addEventListener("loadedmetadata", r, { once: true });
+          v.addEventListener("loadeddata", r, { once: true });
+          v.addEventListener("error", r, { once: true });
+        })
+      ));
+      Promise.all(items).then(resolve);
+      setTimeout(resolve, 2500); // never hold the videos back longer than this
     });
     (async () => {
-      await tileReady;
-      await Promise.all(firsts.map(grab));   // the ones needed first
-      await Promise.all(rest.map(grab));     // the rest
+      await smallStuffReady;
+      await runThrottled(firsts, 3);   // the ones needed first
+      await runThrottled(rest, 3);     // the rest, still gently
     })();
   }
 

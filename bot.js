@@ -15,6 +15,7 @@ const CONTACT_URL   = "https://t.me/mi1lord9";
 const INSTAGRAM_URL = "https://www.instagram.com/plakzzy";
 const SIGNAL_URL    = "https://signal.me/#eu/iv1BpOKjaVrggSDgYIcz0IgeK0AKiw0NSBmtb73uNGYcL1DPrW5L35GeC02okV-x";
 const THREEMA_URL   = "https://threema.id/BV3UYVAP"; // Threema-Link
+const SNAPCHAT_URL  = "https://www.snapchat.com/add/technique.ml?share_id=fJFm7J3vEEs&locale=en-US";
 // ════════════════════════════════════════════════
 
 const TELEGRAM_API = `https://api.telegram.org/bot${BOT_TOKEN}`;
@@ -83,16 +84,20 @@ async function sendWelcomeMenu(chatId) {
   inline_keyboard.push([{ text: "🔑 Zugangscode (/code)", callback_data: "get_code" }]);
 
   // Reihe 4: Instagram + Signal nebeneinander
-  const socialRow = [
+  inline_keyboard.push([
     { text: "📸 Instagram", url: INSTAGRAM_URL },
     { text: "🔵 Signal", url: SIGNAL_URL },
-  ];
-  inline_keyboard.push(socialRow);
+  ]);
 
-  // Reihe 5: Threema (nur anzeigen, wenn Link gesetzt ist)
+  // Reihe 5: Threema + Snapchat nebeneinander
+  const row5 = [];
   if (THREEMA_URL && THREEMA_URL.trim() !== "") {
-    inline_keyboard.push([{ text: "🔒 Threema", url: THREEMA_URL }]);
+    row5.push({ text: "🔒 Threema", url: THREEMA_URL });
   }
+  if (SNAPCHAT_URL && SNAPCHAT_URL.trim() !== "") {
+    row5.push({ text: "👻 Snapchat", url: SNAPCHAT_URL });
+  }
+  if (row5.length) inline_keyboard.push(row5);
 
   const text =
     `✨ <b>Willkommen bei Blocktheke</b>\n` +
@@ -124,18 +129,21 @@ async function handleCodeRequest(chatId) {
       `🔑 <b>Heutiger Zugangscode:</b>\n\n<code>${getTodaysCode()}</code>\n\nTeile diesen Code mit Kunden, denen du heute Zugang zum Shop gewähren möchtest.`
     );
   } else {
-    // Kunde: Nachricht mit Button, um dich direkt zu kontaktieren
+    // Kunde: Nachricht mit Button, um den Zugangscode anzufragen
+    const anfrageText = "Hallo! Ich möchte gerne auf Blocktheke zugreifen. Kann ich den heutigen Code bekommen? 🛒";
+    const kontaktHandle = CONTACT_URL.replace("https://t.me/", "");
     await fetch(`${TELEGRAM_API}/sendMessage`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         chat_id: chatId,
-        text: `🔒 <b>Zugang erforderlich</b>\n\nDieser Shop ist privat. Um den heutigen Zugangscode zu erhalten, kontaktiere uns direkt!`,
+        text: `🔒 <b>Zugangscode erforderlich!</b>\n\nShop ist privat. Um den heutigen Zugangscode zu erhalten, kontaktiere uns direkt!`,
         parse_mode: "HTML",
         reply_markup: {
-          inline_keyboard: [[
-            { text: "💬 Kontakt aufnehmen", url: CONTACT_URL + "?text=" + encodeURIComponent("Hallo! Ich möchte gerne auf Blocktheke zugreifen. Kann ich den heutigen Code bekommen? 🛒") }
-          ]]
+          inline_keyboard: [
+            [{ text: "🔑 Zugangscode anfragen", url: `https://t.me/${kontaktHandle}?text=${encodeURIComponent(anfrageText)}` }],
+            [{ text: "⬅️ Zurück", callback_data: "back_to_menu" }]
+          ]
         }
       })
     });
@@ -181,6 +189,8 @@ app.post("/webhook", async (req, res) => {
       });
       if (data === "get_code" && cbChatId) {
         await handleCodeRequest(cbChatId);
+      } else if (data === "back_to_menu" && cbChatId) {
+        await sendWelcomeMenu(cbChatId);
       }
       return res.json({ ok: true });
     }

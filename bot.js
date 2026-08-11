@@ -150,6 +150,26 @@ async function handleCodeRequest(chatId) {
   }
 }
 
+// ── Dauerhaften "Shop öffnen"-Button unten links setzen ───────
+async function setShopMenuButton() {
+  try {
+    await fetch(`${TELEGRAM_API}/setChatMenuButton`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        menu_button: {
+          type: "web_app",
+          text: "Shop öffnen",
+          web_app: { url: SHOP_URL }
+        }
+      }),
+    });
+    console.log("✅ Shop-Menü-Button gesetzt");
+  } catch (e) {
+    console.error("Menu button error:", e);
+  }
+}
+
 // ── Daily access code generator ───────────────────────────────
 function getTodaysCode() {
   const today = new Date().toISOString().slice(0, 10);
@@ -297,4 +317,5 @@ app.get("/", (req, res) => {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Bot-Backend läuft auf Port ${PORT}`);
+  setShopMenuButton(); // dauerhaften Shop-Button setzen
 });

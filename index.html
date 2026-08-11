@@ -693,12 +693,6 @@
     if (Number.isInteger(n)) return n + ".\u2013";  // 50.–
     return n.toFixed(2);                              // 3.50
   }
-  // Videos fully downloaded into memory as blobs -> instant playback, no network wait.
-  // (preload="auto" is only a hint; mobile browsers ignore it on cellular,
-  //  so we download the bytes ourselves and play from memory.)
-  const videoBlobs = {};
-  function videoSrc(url) { return videoBlobs[url] || url; }
-
   // Line total: for per-piece variants, price × pieces × qty; else price × qty
   function lineTotalOf(variant, qty) {
     if (variant.price === 0) return 0;
@@ -731,51 +725,6 @@
   document.getElementById("unlockBtn").addEventListener("click", checkAccessCode);
   document.getElementById("codeInput").addEventListener("keypress", (e) => { if (e.key === "Enter") checkAccessCode(); });
 
-  // Resolves once every product's FIRST video is downloaded and all tile
-  // previews (photos + preview videos) have their picture — capped so a slow
-  // connection can never trap the user on the matrix screen.
-  function mediaReadyPromise(maxWaitMs) {
-    const firstVideos = PRODUCTS.filter(p => p.videos && p.videos.length).map(p => p.videos[0]);
-    const imgs = [...document.querySelectorAll(".pt-collage img")];
-    const tileVids = [...document.querySelectorAll("video.pt-vid")];
-    return new Promise(resolve => {
-      let settled = false;
-      const finish = () => { if (!settled) { settled = true; resolve(); } };
-      const guard = setTimeout(finish, maxWaitMs);
-
-      // Per-item waiter that can never hang: counts an item as done if it is
-      // already loaded, already failed, or once its event fires (with a cap).
-      const waitFor = (el, readyNow, events) => {
-        if (readyNow()) return Promise.resolve();
-        return new Promise(r => {
-          const done = () => r();
-          events.forEach(ev => el.addEventListener(ev, done, { once: true }));
-          setTimeout(done, maxWaitMs); // hard stop for this item
-        });
-      };
-
-      const imgReady = Promise.all(imgs.map(im =>
-        waitFor(im, () => im.complete || im.naturalWidth > 0, ["load", "error"])
-      ));
-      const vidReady = Promise.all(tileVids.map(v =>
-        // readyState >= 1 means it has metadata; v.error means it already failed
-        waitFor(v, () => v.readyState >= 1 || !!v.error, ["loadeddata", "loadedmetadata", "error"])
-      ));
-      const blobReady = new Promise(r => {
-        const tick = () => {
-          if (settled || firstVideos.every(u => videoBlobs[u])) return r();
-          setTimeout(tick, 120);
-        };
-        tick();
-      });
-
-      Promise.all([imgReady, vidReady, blobReady]).then(() => {
-        clearTimeout(guard);
-        finish();
-      });
-    });
-  }
-
   function startMatrixSequence() {
     const canvas = document.getElementById("matrixCanvas");
     const ctx = canvas.getContext("2d");
@@ -800,12 +749,7 @@
       requestAnimationFrame(draw);
     }
     draw();
-    // Keep the rain going until the media is actually ready (min 2s so it always
-    // looks intentional, max 9s so a bad connection can't stall the shop).
-    const minShow = new Promise(r => setTimeout(r, 2000));
-    Promise.all([minShow, mediaReadyPromise(9000)]).then(() => {
-      running = false; shatterScreen(canvas);
-    });
+    setTimeout(() => { running = false; shatterScreen(canvas); }, 4000);
   }
 
   function shatterScreen(canvas) {
@@ -870,8 +814,6 @@
         input.style.borderColor = "#b794f6"; input.style.boxShadow = "0 0 22px rgba(183,148,246,0.45)";
         btn.textContent = "ACCESS GRANTED"; btn.style.background = "#b794f6"; btn.style.color = "#140a24"; btn.style.fontFamily = "monospace";
         startMatrixSequence();
-        // quietly warm up the video cache in the background
-        prefetchVideos();
       } else {
         btn.textContent = "🔓 ENTSPERREN"; btn.disabled = false;
         errorEl.textContent = "❌ Falscher Code! Frage den Shopinhaber nach dem heutigen Code.";
@@ -920,9 +862,9 @@
       // wide bottom video loads as fast as the two on top (a late frame like
       // #t=3 forces downloading the whole clip up to that second).
       emojiCell = `<div class="pt-collage pt-collage-v3">
-        <video src="${videoSrc(p.videos[0])}#t=0.5" class="pt-vid" muted playsinline preload="metadata" onerror="cdnFallback(this)" onloadeddata="this.classList.add('loaded')"></video>
-        <video src="${videoSrc(p.videos[1])}#t=0.5" class="pt-vid" muted playsinline preload="metadata" onerror="cdnFallback(this)" onloadeddata="this.classList.add('loaded')"></video>
-        <video src="${videoSrc(p.videos[2])}#t=0.5" class="vid-wide pt-vid" muted playsinline preload="metadata" onerror="cdnFallback(this)" onloadeddata="this.classList.add('loaded')"></video>
+        <video src="${p.videos[0]}#t=0.5" class="pt-vid" muted playsinline preload="metadata" onerror="cdnFallback(this)" onloadeddata="this.classList.add('loaded')"></video>
+        <video src="${p.videos[1]}#t=0.5" class="pt-vid" muted playsinline preload="metadata" onerror="cdnFallback(this)" onloadeddata="this.classList.add('loaded')"></video>
+        <video src="${p.videos[2]}#t=0.5" class="vid-wide pt-vid" muted playsinline preload="metadata" onerror="cdnFallback(this)" onloadeddata="this.classList.add('loaded')"></video>
       </div>`;
     } else if (p.photos && p.photos.length >= 4) {
       emojiCell = `<div class="pt-collage">
@@ -955,10 +897,6 @@
     document.querySelectorAll("video.pt-vid").forEach(v => {
       try { v.preload = "metadata"; v.load(); } catch (e) {}
     });
-    // Start downloading all videos NOW — during code entry + matrix animation —
-    // so they're cached before the user ever reaches a product page.
-    // prefetchVideos() is defined later in this script; defer one tick so it exists.
-    setTimeout(() => { try { prefetchVideos(); } catch (e) {} }, 0);
   });
 
   // ═══ SOLD OUT PLACEHOLDER TILES (blurred, not clickable) ═══
@@ -976,7 +914,7 @@
       { name: "Sugar Rosin", big: "Live Rosin", from: "ab CHF 70.–" },
     ];
     return fakes.map((f, idx) => {
-      const imgs = mixes[idx].map(src => `<img src="${src}" onerror="this.style.visibility='hidden'">`).join("");
+      const imgs = mixes[idx].map(src => `<img src="${src}" loading="lazy" onerror="this.style.visibility='hidden'">`).join("");
       return `
       <div class="product-tile sold-out">
         <div class="sold-stamp"><span>SOLD OUT</span></div>
@@ -1026,7 +964,7 @@
     const media = [];
     if (p.videos) p.videos.forEach((v, i) => {
       const poster = (p.posters && p.posters[i]) ? ` poster="${p.posters[i]}"` : "";
-      media.push(`<video src="${videoSrc(v)}#t=0.1"${poster} class="pp-gvid" loop muted playsinline preload="auto" onclick="toggleVid(this)" onerror="cdnFallback(this)" onloadeddata="this.classList.add('loaded')"></video>`);
+      media.push(`<video src="${v}#t=0.1"${poster} class="pp-gvid" loop muted playsinline preload="auto" onclick="toggleVid(this)" onerror="cdnFallback(this)" onloadeddata="this.classList.add('loaded')"></video>`);
     });
     if (p.photos) p.photos.forEach(src => media.push(`<img src="${src}" class="pp-gimg" onerror="this.style.display='none'">`));
     if (media.length) {
@@ -1195,103 +1133,6 @@
 
   // Preload all product videos quietly in the background after unlock,
   // so they're cached by the time the user opens a hash product (no black screen).
-  let videosPrefetched = false;
-  function prefetchVideos() {
-    if (videosPrefetched) return;
-    videosPrefetched = true;
-    // Photos are small — pull them into cache first so no collage cell stays blank.
-    PRODUCTS.forEach(p => {
-      if (!p.photos) return;
-      p.photos.forEach(u => { const im = new Image(); im.src = u; });
-    });
-    // Priority order: first video of each product first (that's what opens first),
-    // then the rest. Download them in parallel — no duplicate <video> requests now.
-    const firsts = [], rest = [];
-    PRODUCTS.forEach(p => {
-      if (!p.videos) return;
-      p.videos.forEach((u, i) => (i === 0 ? firsts : rest).push(u));
-    });
-    // Run at most N downloads at a time. Firing 10 fetches at once used to eat
-    // every free connection to the CDN and starve the collage images — that's
-    // why a tile photo could stay blank.
-    const runThrottled = async (urls, limit) => {
-      let idx = 0;
-      const workers = Array.from({ length: Math.min(limit, urls.length) }, async () => {
-        while (idx < urls.length) {
-          const url = urls[idx++];
-          await grab(url);
-        }
-      });
-      await Promise.all(workers);
-    };
-    PRODUCTS.forEach(p => {
-      if (!p.videos) return;
-      p.videos.forEach((u, i) => (i === 0 ? firsts : rest).push(u));
-    });
-    const grab = async (url) => {
-      if (videoBlobs[url]) return;
-      try {
-        const res = await fetch(url, { cache: "force-cache" });
-        if (!res.ok) return;
-        const blob = await res.blob();
-        videoBlobs[url] = URL.createObjectURL(blob);
-        // Swap the ready blob in. Protect only videos that would actually be
-        // disrupted: ones that are playing, or that already have picture data.
-        // A blank/greyed video (readyState < 2) MUST be upgraded — that was the
-        // cause of the grey shimmer sticking around on the product page.
-        document.querySelectorAll("video.pp-gvid").forEach(v => {
-          const cur = v.getAttribute("src") || "";
-          const raw = cur.split("#")[0];
-          if (raw !== url) return;
-          if (cur.startsWith("blob:")) return;   // already swapped
-          if (!v.paused) return;                 // currently playing — leave alone
-          if (v.readyState >= 2) return;         // already showing frames — no need
-          const frag = cur.split("#")[1];
-          v.src = videoBlobs[url] + (frag ? "#" + frag : "");
-          v.preload = "auto";
-          try { v.load(); } catch (e) {}
-          // if this one is the centred video, start it once it's ready
-          const gal = v.closest(".pp-gallery");
-          if (gal) {
-            const left = v.offsetLeft - gal.scrollLeft;
-            const visW = Math.max(0, Math.min(left + v.offsetWidth, gal.clientWidth) - Math.max(left, 0));
-            if (v.offsetWidth && visW / v.offsetWidth >= 0.6) {
-              v.addEventListener("loadeddata", () => { const pr = v.play(); if (pr && pr.catch) pr.catch(()=>{}); }, { once: true });
-            }
-          }
-        });
-      } catch (e) { /* falls back to the normal URL */ }
-    };
-    // Let the small stuff finish first: collage photos AND tile preview frames.
-    // Only then start the heavy video downloads, and never more than 3 at once,
-    // so images are never starved of connections.
-    const tiles = [...document.querySelectorAll("video.pt-vid")];
-    const smallStuffReady = new Promise(resolve => {
-      const imgs = [...document.querySelectorAll(".pt-collage img")];
-      const items = [];
-      imgs.forEach(im => items.push(
-        (im.complete || im.naturalWidth > 0) ? Promise.resolve() : new Promise(r => {
-          im.addEventListener("load", r, { once: true });
-          im.addEventListener("error", r, { once: true });
-        })
-      ));
-      tiles.forEach(v => items.push(
-        (v.readyState >= 1 || v.error) ? Promise.resolve() : new Promise(r => {
-          v.addEventListener("loadedmetadata", r, { once: true });
-          v.addEventListener("loadeddata", r, { once: true });
-          v.addEventListener("error", r, { once: true });
-        })
-      ));
-      Promise.all(items).then(resolve);
-      setTimeout(resolve, 2500); // never hold the videos back longer than this
-    });
-    (async () => {
-      await smallStuffReady;
-      await runThrottled(firsts, 3);   // the ones needed first
-      await runThrottled(rest, 3);     // the rest, still gently
-    })();
-  }
-
   function toggleVid(v) {
     // Only the video that's mostly in view responds to taps — ignore the
     // half-visible neighbours peeking in from the sides.

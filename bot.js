@@ -79,14 +79,17 @@ async function sendWelcomeMenu(chatId) {
   // Reihe 2: Kontakt (Telegram)
   inline_keyboard.push([{ text: "💬 Kontakt", url: CONTACT_URL }]);
 
-  // Reihe 3: Instagram + Signal nebeneinander
+  // Reihe 3: Zugangscode anfragen (löst dieselbe /code-Logik aus)
+  inline_keyboard.push([{ text: "🔑 Zugangscode (/code)", callback_data: "get_code" }]);
+
+  // Reihe 4: Instagram + Signal nebeneinander
   const socialRow = [
     { text: "📸 Instagram", url: INSTAGRAM_URL },
     { text: "🔵 Signal", url: SIGNAL_URL },
   ];
   inline_keyboard.push(socialRow);
 
-  // Reihe 4: Threema (nur anzeigen, wenn Link gesetzt ist)
+  // Reihe 5: Threema (nur anzeigen, wenn Link gesetzt ist)
   if (THREEMA_URL && THREEMA_URL.trim() !== "") {
     inline_keyboard.push([{ text: "🔒 Threema", url: THREEMA_URL }]);
   }
@@ -115,6 +118,31 @@ async function sendWelcomeMenu(chatId) {
   return res.json();
 }
 
+// ── /code-Logik (von Befehl UND Button genutzt) ───────────────
+async function handleCodeRequest(chatId) {
+  if (String(chatId) === String(YOUR_CHAT_ID)) {
+    await sendTelegramMessage(chatId,
+      `🔑 <b>Heutiger Zugangscode:</b>\n\n<code>${getTodaysCode()}</code>\n\nTeile diesen Code mit Kunden, denen du heute Zugang zum Shop gewähren möchtest.`
+    );
+  } else {
+    // Kunde: Nachricht mit Button, um dich direkt zu kontaktieren
+    await fetch(`${TELEGRAM_API}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: `🔒 <b>Zugang erforderlich</b>\n\nDieser Shop ist privat. Um den heutigen Zugangscode zu erhalten, kontaktiere uns direkt!`,
+        parse_mode: "HTML",
+        reply_markup: {
+          inline_keyboard: [[
+            { text: "💬 Kontakt aufnehmen", url: CONTACT_URL + "?text=" + encodeURIComponent("Hallo! Ich möchte gerne auf Blocktheke zugreifen. Kann ich den heutigen Code bekommen? 🛒") }
+          ]]
+        }
+      })
+    });
+  }
+}
+
 // ── Daily access code generator ───────────────────────────────
 function getTodaysCode() {
   const today = new Date().toISOString().slice(0, 10);
@@ -140,6 +168,24 @@ app.post("/check-code", (req, res) => {
 app.post("/webhook", async (req, res) => {
   try {
     const update = req.body;
+
+    // ── Button-Klick (callback_query) verarbeiten ──
+    if (update.callback_query) {
+      const cq = update.callback_query;
+      const cbChatId = cq.message?.chat?.id;
+      const data = cq.data;
+      // Ladeanimation am Button beenden
+      await fetch(`${TELEGRAM_API}/answerCallbackQuery`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ callback_query_id: cq.id }),
+      });
+      if (data === "get_code" && cbChatId) {
+        await handleCodeRequest(cbChatId);
+      }
+      return res.json({ ok: true });
+    }
+
     const message = update.message;
     if (!message) return res.json({ ok: true });
 
@@ -172,27 +218,7 @@ app.post("/webhook", async (req, res) => {
         "🛒 Shop öffnen"
       );
     } else if (text === "/code") {
-      if (String(chatId) === String(YOUR_CHAT_ID)) {
-        await sendTelegramMessage(chatId,
-          `🔑 <b>Heutiger Zugangscode:</b>\n\n<code>${getTodaysCode()}</code>\n\nTeile diesen Code mit Kunden, denen du heute Zugang zum Shop gewähren möchtest.`
-        );
-      } else {
-        // Send message with button to contact owner directly
-        await fetch(`${TELEGRAM_API}/sendMessage`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            chat_id: chatId,
-            text: `🔒 <b>Zugang erforderlich</b>\n\nDieser Shop ist privat. Um den heutigen Zugangscode zu erhalten, kontaktiere uns direkt!`,
-            parse_mode: "HTML",
-            reply_markup: {
-              inline_keyboard: [[
-                { text: "💬 Kontakt aufnehmen", url: CONTACT_URL + "?text=" + encodeURIComponent("Hallo! Ich möchte gerne auf Blocktheke zugreifen. Kann ich den heutigen Code bekommen? 🛒") }
-              ]]
-            }
-          })
-        });
-      }
+      await handleCodeRequest(chatId);
     } else if (text === "/contact") {
       await sendTelegramMessage(
         chatId,

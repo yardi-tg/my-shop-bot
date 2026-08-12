@@ -21,6 +21,10 @@ const SNAPCHAT_URL  = "https://www.snapchat.com/add/technique.ml?share_id=fJFm7J
 // (leer lassen = für ALLE Gruppen aktiv, in denen der Bot Admin ist.
 //  Optional die Warteraum-Chat-ID eintragen, um es nur dort zu machen.)
 const WAITING_ROOM_CHAT_ID = ""; // z.B. "-1001234567890" — leer = überall
+
+// Warteraum-Kanal + Hauptkanal (für den /wartezimmer-Post)
+const WAITING_ROOM_POST_ID = "-1003955096282";          // Kanal, in den gepostet wird
+const MAIN_CHANNEL_URL = "https://t.me/+xTzxPx24HoBjMDJk"; // Button-Ziel (Hauptkanal)
 // Liste der heute akzeptierten Personen (für "/code" Übersicht)
 let approvedToday = [];
 let approvedDay = new Date().toISOString().slice(0, 10);
@@ -337,6 +341,45 @@ app.post("/webhook", async (req, res) => {
         }
       } else {
         // Kein Besitzer: so tun als wäre es ein unbekannter Befehl -> Standardmenü
+        await sendWelcomeMenu(chatId);
+      }
+    } else if (text === "/wartezimmer") {
+      // Nur der Besitzer darf die Warteraum-Nachricht posten
+      if (String(chatId) === String(YOUR_CHAT_ID)) {
+        const wzText =
+          `✨ <b>Willkommen im Wartezimmer von Blocktheke</b> 🇨🇭 ✨\n\n` +
+          `Schön, dass du da bist! 🙌\n\n` +
+          `Dieser Kanal ist deine Eintrittskarte. Von hier aus gelangst du in unseren Hauptkanal — und bleibst immer verbunden, egal was passiert.\n\n` +
+          `📌 <b>Wofür ist das Wartezimmer da?</b>\n` +
+          `- Es ist dein sicherer Ankerpunkt\n` +
+          `- Sollte der Hauptkanal jemals verschwinden 😉, bekommst du hier sofort den neuen Link\n` +
+          `- So verlierst du uns nie aus den Augen\n\n` +
+          `👇 Tippe unten auf den Button, um direkt in den Hauptkanal zu gelangen:`;
+        const postRes = await fetch(`${TELEGRAM_API}/sendMessage`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: WAITING_ROOM_POST_ID,
+            text: wzText,
+            parse_mode: "HTML",
+            reply_markup: {
+              inline_keyboard: [[
+                { text: "➡️ Zum Hauptkanal", url: MAIN_CHANNEL_URL }
+              ]]
+            }
+          })
+        });
+        const result = await postRes.json();
+        if (result.ok) {
+          await sendTelegramMessage(chatId,
+            `✅ Wartezimmer-Nachricht wurde gepostet!\n\n<i>Tipp: Gehe in den Warteraum, halte die Nachricht gedrückt und wähle „Anpinnen“, damit sie ganz oben bleibt.</i>`
+          );
+        } else {
+          await sendTelegramMessage(chatId,
+            `⚠️ Konnte nicht posten. Grund: ${result.description || "unbekannt"}\n\nStelle sicher, dass der Bot Admin im Warteraum ist und dort posten darf.`
+          );
+        }
+      } else {
         await sendWelcomeMenu(chatId);
       }
     } else if (text === "/contact") {

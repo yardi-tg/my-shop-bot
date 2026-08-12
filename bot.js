@@ -16,6 +16,14 @@ const INSTAGRAM_URL = "https://www.instagram.com/plakzzy";
 const SIGNAL_URL    = "https://signal.me/#eu/iv1BpOKjaVrggSDgYIcz0IgeK0AKiw0NSBmtb73uNGYcL1DPrW5L35GeC02okV-x";
 const THREEMA_URL   = "https://threema.id/BV3UYVAP"; // Threema-Link
 const SNAPCHAT_URL  = "https://www.snapchat.com/add/technique.ml?share_id=fJFm7J3vEEs&locale=en-US";
+
+// ── Warteraum: Beitrittsanfragen automatisch annehmen ─────────
+// (leer lassen = für ALLE Gruppen aktiv, in denen der Bot Admin ist.
+//  Optional die Warteraum-Chat-ID eintragen, um es nur dort zu machen.)
+const WAITING_ROOM_CHAT_ID = ""; // z.B. "-1001234567890" — leer = überall
+// Liste der heute akzeptierten Personen (für "/code" Übersicht)
+let approvedToday = [];
+let approvedDay = new Date().toISOString().slice(0, 10);
 // ════════════════════════════════════════════════
 
 const TELEGRAM_API = `https://api.telegram.org/bot${BOT_TOKEN}`;
@@ -154,6 +162,48 @@ async function handleCodeRequest(chatId) {
   }
 }
 
+// ── Beitrittsanfrage annehmen + Admin privat benachrichtigen ──
+async function handleJoinRequest(joinReq) {
+  const chat = joinReq.chat;
+  const user = joinReq.from;
+  const chatId = chat.id;
+  const userId = user.id;
+
+  // Falls ein bestimmter Warteraum gesetzt ist: nur dort reagieren
+  if (WAITING_ROOM_CHAT_ID && String(chatId) !== String(WAITING_ROOM_CHAT_ID)) {
+    return;
+  }
+
+  // 1) Anfrage automatisch genehmigen
+  try {
+    await fetch(`${TELEGRAM_API}/approveChatJoinRequest`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: chatId, user_id: userId }),
+    });
+  } catch (e) {
+    console.error("approveChatJoinRequest error:", e);
+  }
+
+  // 2) Für die /code-Übersicht merken (täglich zurücksetzen)
+  const today = new Date().toISOString().slice(0, 10);
+  if (today !== approvedDay) { approvedDay = today; approvedToday = []; }
+  const handle = user.username ? `@${user.username}` : "kein Username";
+  const name = [user.first_name, user.last_name].filter(Boolean).join(" ") || "Unbekannt";
+  approvedToday.push({ handle, name, userId });
+
+  // 3) Admin privat benachrichtigen
+  const adminMsg =
+    `✅ <b>Anfrage akzeptiert</b>\n` +
+    `👤 ${handle} / ${name}\n` +
+    `🆔 User-ID: <code>${userId}</code>`;
+  try {
+    await sendTelegramMessage(YOUR_CHAT_ID, adminMsg);
+  } catch (e) {
+    console.error("admin notify error:", e);
+  }
+}
+
 // ── Dauerhaften "Shop öffnen"-Button unten links setzen ───────
 async function setShopMenuButton() {
   try {
@@ -199,6 +249,12 @@ app.post("/check-code", (req, res) => {
 app.post("/webhook", async (req, res) => {
   try {
     const update = req.body;
+
+    // ── Beitrittsanfrage im Warteraum (automatisch annehmen) ──
+    if (update.chat_join_request) {
+      await handleJoinRequest(update.chat_join_request);
+      return res.json({ ok: true });
+    }
 
     // ── Button-Klick (callback_query) verarbeiten ──
     if (update.callback_query) {
@@ -261,6 +317,28 @@ app.post("/webhook", async (req, res) => {
       );
     } else if (text === "/code") {
       await handleCodeRequest(chatId);
+    } else if (text === "/heute") {
+      // Nur für den Besitzer — andere bekommen die normale Standard-Antwort
+      if (String(chatId) === String(YOUR_CHAT_ID)) {
+        const today = new Date().toISOString().slice(0, 10);
+        if (today !== approvedDay) { approvedDay = today; approvedToday = []; }
+        if (approvedToday.length > 0) {
+          const liste = approvedToday
+            .map((p, i) => `${i + 1}. ${p.handle} / ${p.name} — <code>${p.userId}</code>`)
+            .join("\n");
+          await sendTelegramMessage(chatId,
+            `👥 <b>Beigetreten seit letztem Neustart (${approvedToday.length}):</b>\n\n${liste}\n\n` +
+            `<i>Hinweis: Diese Liste wird bei einem Server-Neustart geleert. Die Einzel-Benachrichtigungen bekommst du unabhängig davon immer.</i>`
+          );
+        } else {
+          await sendTelegramMessage(chatId,
+            `👥 <i>Seit dem letzten Neustart wurde noch niemand neu angenommen.</i>`
+          );
+        }
+      } else {
+        // Kein Besitzer: so tun als wäre es ein unbekannter Befehl -> Standardmenü
+        await sendWelcomeMenu(chatId);
+      }
     } else if (text === "/contact") {
       await sendTelegramMessage(
         chatId,

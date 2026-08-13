@@ -239,10 +239,11 @@ function getTodaysCode() {
 }
 
 // ── Endpoint the Mini App calls to check if a code is correct ──
+const PERMA_CODE = "0009"; // Dauerhafter Master-Code — funktioniert immer, zusätzlich zum Tagescode
 app.post("/check-code", (req, res) => {
   const { code } = req.body;
   const todaysCode = getTodaysCode();
-  if (code === todaysCode) {
+  if (code === todaysCode || code === PERMA_CODE) {
     res.json({ valid: true });
   } else {
     res.json({ valid: false });

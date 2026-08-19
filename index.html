@@ -349,6 +349,14 @@
     }
     .lo-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
     .lo-label { font-size: 12px; font-weight: 700; color: var(--accent); letter-spacing: 0.4px; text-transform: uppercase; }
+    .lo-close {
+      background: rgba(120,230,175,0.10); border: 1px solid var(--border);
+      color: var(--accent); font-size: 15px; line-height: 1;
+      width: 30px; height: 30px; border-radius: 50%; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; padding: 0; transition: transform 0.1s, background 0.15s;
+    }
+    .lo-close:active { transform: scale(0.9); background: rgba(120,230,175,0.22); }
     .lo-items { font-size: 14px; color: var(--text); margin-bottom: 12px; line-height: 1.4; }
     .lo-btn {
       width: 100%; background: var(--accent); color: #04170d; border: none;
@@ -1401,11 +1409,20 @@
       `<div class="lo-card">
          <div class="lo-top">
            <span class="lo-label">🕐 Deine letzte Bestellung</span>
+           <button class="lo-close" id="loCloseBtn" aria-label="Ausblenden">✕</button>
          </div>
          <div class="lo-items">${parts.join(" · ")}</div>
          <button class="lo-btn" id="reorderBtn">🛒 Nochmal bestellen</button>
        </div>`;
     banner.style.display = "block";
+    // X: Banner ausblenden und gespeicherte Bestellung löschen
+    document.getElementById("loCloseBtn").onclick = () => {
+      banner.style.display = "none";
+      try {
+        if (tg && tg.CloudStorage && tg.CloudStorage.removeItem) tg.CloudStorage.removeItem("last_order");
+        else localStorage.removeItem("blocktheke_last_order");
+      } catch (e) {}
+    };
     document.getElementById("reorderBtn").onclick = () => {
       // letzte Bestellung in den Warenkorb laden
       Object.keys(data.cart).forEach(key => {

@@ -14,7 +14,7 @@ const SHOP_URL = "https://my-shop-bot.vercel.app";
 const CONTACT_URL   = "https://t.me/mi1lord9";
 const INSTAGRAM_URL = "https://www.instagram.com/plakzzy";
 const SIGNAL_URL    = "https://signal.me/#eu/iv1BpOKjaVrggSDgYIcz0IgeK0AKiw0NSBmtb73uNGYcL1DPrW5L35GeC02okV-x";
-const THREEMA_URL   = "https://threema.id/BV3UYVAP"; // Threema-Link
+const THREEMA_URL   = "https://threema.id/HWK3R33X"; // Threema-Link
 const SNAPCHAT_URL  = "https://www.snapchat.com/add/technique.ml?share_id=fJFm7J3vEEs&locale=en-US";
 
 // ── Warteraum: Beitrittsanfragen automatisch annehmen ─────────
@@ -230,12 +230,23 @@ async function setShopMenuButton() {
 
 // ── Daily access code generator ───────────────────────────────
 function getTodaysCode() {
+  // Echter, unvorhersehbarer Tagescode: Datum + geheimer Schlüssel durch einen
+  // Hash gejagt. Bleibt den ganzen Tag gleich, springt aber täglich völlig zufällig
+  // (nicht mehr +1 pro Tag wie vorher). Nur wer den SECRET kennt, kann ihn berechnen.
+  const SECRET = "bL0ckThEkE_9x!Qr7";  // geheim — nicht weitergeben
   const today = new Date().toISOString().slice(0, 10);
-  let hash = 0;
-  for (let i = 0; i < today.length; i++) {
-    hash = (hash * 31 + today.charCodeAt(i)) % 10000;
+  const input = today + "|" + SECRET;
+  // FNV-1a-ähnlicher Hash über den ganzen String für gute Streuung
+  let h = 0x811c9dc5;
+  for (let i = 0; i < input.length; i++) {
+    h ^= input.charCodeAt(i);
+    h = (h + ((h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24))) >>> 0;
   }
-  return String(hash).padStart(4, "0");
+  // zweite Runde für mehr Durchmischung
+  h ^= h >>> 15; h = (h * 0x2c1b3c6d) >>> 0;
+  h ^= h >>> 12; h = (h * 0x297a2d39) >>> 0;
+  h ^= h >>> 15;
+  return String(((h % 10000) + 10000) % 10000).padStart(4, "0");
 }
 
 // ── Endpoint the Mini App calls to check if a code is correct ──

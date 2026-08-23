@@ -25,6 +25,8 @@ const WAITING_ROOM_CHAT_ID = ""; // z.B. "-1001234567890" — leer = überall
 // Warteraum-Kanal + Hauptkanal (für den /wartezimmer-Post)
 const WAITING_ROOM_POST_ID = "-1003955096282";          // Kanal, in den gepostet wird
 const MAIN_CHANNEL_URL = "https://t.me/+xTzxPx24HoBjMDJk"; // Button-Ziel (Hauptkanal)
+const MAIN_CHANNEL_ID = "-1004383770209";   // Chat-ID des Hauptkanals
+const BOT_USERNAME = "Arbeitertheke_bot";                  // für den Shop-Button im Hauptkanal-Post
 // Liste der heute akzeptierten Personen (für "/code" Übersicht)
 let approvedToday = [];
 let approvedDay = new Date().toISOString().slice(0, 10);
@@ -389,6 +391,56 @@ app.post("/webhook", async (req, res) => {
         } else {
           await sendTelegramMessage(chatId,
             `⚠️ Konnte nicht posten. Grund: ${result.description || "unbekannt"}\n\nStelle sicher, dass der Bot Admin im Warteraum ist und dort posten darf.`
+          );
+        }
+      } else {
+        await sendWelcomeMenu(chatId);
+      }
+    } else if (text === "/hauptkanal") {
+      // Nur der Besitzer darf die Hauptkanal-Nachricht posten
+      if (String(chatId) === String(YOUR_CHAT_ID)) {
+        if (!MAIN_CHANNEL_ID || MAIN_CHANNEL_ID.trim() === "") {
+          await sendTelegramMessage(chatId,
+            `⚠️ <b>Hauptkanal-ID fehlt</b>\n\nTrage in der bot.js bei <code>MAIN_CHANNEL_ID</code> die Chat-ID deines Hauptkanals ein (z.B. "-1001234567890").\n\nSo findest du sie: eine Nachricht aus dem Hauptkanal an @getidsbot weiterleiten.`
+          );
+          return res.json({ ok: true });
+        }
+        const hkText =
+          `🛒 <b>Unser aktuelles Sortiment</b>\n\n` +
+          `🧙‍♂️🌲 <b>Wizard Trees</b> — OG Exotics USA Cali\n` +
+          `🇺🇸 USA Import\n\n` +
+          `💨🖊️ <b>THC Vapes</b> — Whole Melt (20 Flavours)\n` +
+          `🇺🇸 USA Import\n\n` +
+          `🥶❄️ <b>Fresh Frozen</b> — Hash Burger\n` +
+          `💎 Secret Farm\n\n` +
+          `2️⃣⚡ <b>Double Static</b> — Forbidden Fruit\n` +
+          `💎 Secret Farm\n\n` +
+          `━━━━━━━━━━━━━━\n\n` +
+          `⚠️ <b>Fragen, Probleme, Fehler oder Verbesserungen?</b>\n` +
+          `Melde dich direkt bei mir 👉 @mi1lord9\n\n` +
+          `📱 Alles Weitere in der Mini-App — Videos, Preise, Varianten. Bestellen geht dort auch direkt.`;
+        const postRes = await fetch(`${TELEGRAM_API}/sendMessage`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: MAIN_CHANNEL_ID,
+            text: hkText,
+            parse_mode: "HTML",
+            reply_markup: {
+              inline_keyboard: [[
+                { text: "🛒 Zum Shop", url: `https://t.me/${BOT_USERNAME}` }
+              ]]
+            }
+          })
+        });
+        const result = await postRes.json();
+        if (result.ok) {
+          await sendTelegramMessage(chatId,
+            `✅ Hauptkanal-Nachricht wurde gepostet!\n\n<i>Tipp: Halte die Nachricht im Kanal gedrückt und wähle „Anpinnen“, damit sie oben bleibt.</i>`
+          );
+        } else {
+          await sendTelegramMessage(chatId,
+            `⚠️ Konnte nicht posten. Grund: ${result.description || "unbekannt"}\n\nStelle sicher, dass der Bot Admin im Hauptkanal ist und dort posten darf.`
           );
         }
       } else {

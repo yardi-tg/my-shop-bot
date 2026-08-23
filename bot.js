@@ -30,6 +30,84 @@ const BOT_USERNAME = "Arbeitertheke_bot";                  // für den Shop-Butt
 // Liste der heute akzeptierten Personen (für "/code" Übersicht)
 let approvedToday = [];
 let approvedDay = new Date().toISOString().slice(0, 10);
+
+// ── Dauerhafte Liste aller Warteraum-Beitritte ────────────────
+// Telegram erlaubt Bots NICHT, Mitgliederlisten abzurufen. Deshalb merkt sich
+// der Bot jeden, der über den Warteraum-Link beitritt. Gespeichert wird in einer
+// angepinnten Nachricht im Besitzer-Chat — die überlebt Server-Neustarts.
+let knownUsers = [];        // [{ id, handle, name }]
+let dbMessageId = null;     // ID der angepinnten Speicher-Nachricht
+let dbLoaded = false;
+const DB_MARKER = "🗂 BLOCKTHEKE-SPEICHER (nicht löschen)";
+
+function usersToText() {
+  const lines = knownUsers.map(u => `${u.id}|${u.handle}|${u.name}`);
+  return `${DB_MARKER}\n${lines.join("\n")}`;
+}
+function textToUsers(text) {
+  if (!text || !text.startsWith(DB_MARKER)) return null;
+  return text.split("\n").slice(1).filter(Boolean).map(line => {
+    const [id, handle, ...rest] = line.split("|");
+    return { id, handle: handle || "kein Username", name: rest.join("|") || "Unbekannt" };
+  });
+}
+async function dbLoad() {
+  if (dbLoaded) return;
+  dbLoaded = true;
+  try {
+    const r = await fetch(`${TELEGRAM_API}/getChat?chat_id=${YOUR_CHAT_ID}`);
+    const j = await r.json();
+    const pinned = j?.result?.pinned_message;
+    const parsed = pinned ? textToUsers(pinned.text) : null;
+    if (parsed) { knownUsers = parsed; dbMessageId = pinned.message_id; }
+  } catch (e) { console.error("dbLoad:", e.message); }
+}
+async function dbSave() {
+  try {
+    const text = usersToText();
+    if (text.length > 4000) {
+      // Telegram-Nachrichten sind auf 4096 Zeichen begrenzt
+      console.warn("Speicher fast voll — älteste Einträge werden verworfen");
+      knownUsers = knownUsers.slice(-100);
+    }
+    if (dbMessageId) {
+      const r = await fetch(`${TELEGRAM_API}/editMessageText`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chat_id: YOUR_CHAT_ID, message_id: dbMessageId, text: usersToText() }),
+      });
+      const j = await r.json();
+      if (j.ok) return;
+      dbMessageId = null; // Nachricht weg -> neu anlegen
+    }
+    const r2 = await fetch(`${TELEGRAM_API}/sendMessage`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: YOUR_CHAT_ID, text: usersToText(), disable_notification: true }),
+    });
+    const j2 = await r2.json();
+    if (j2.ok && j2.result) {
+      dbMessageId = j2.result.message_id;
+      await fetch(`${TELEGRAM_API}/pinChatMessage`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chat_id: YOUR_CHAT_ID, message_id: dbMessageId, disable_notification: true }),
+      });
+    }
+  } catch (e) { console.error("dbSave:", e.message); }
+}
+function rememberUser(u) {
+  if (knownUsers.some(x => String(x.id) === String(u.id))) return false;
+  knownUsers.push(u);
+  return true;
+}
+// Prüft für EINEN bekannten Nutzer, ob er im angegebenen Kanal ist
+async function isInChat(chatId, userId) {
+  try {
+    const r = await fetch(`${TELEGRAM_API}/getChatMember?chat_id=${chatId}&user_id=${userId}`);
+    const j = await r.json();
+    if (!j.ok) return false;
+    const st = j.result?.status;
+    return ["creator", "administrator", "member", "restricted"].includes(st);
+  } catch (e) { return false; }
+}
 // ════════════════════════════════════════════════
 
 const TELEGRAM_API = `https://api.telegram.org/bot${BOT_TOKEN}`;
@@ -198,6 +276,10 @@ async function handleJoinRequest(joinReq) {
   const handle = user.username ? `@${user.username}` : "kein Username";
   const name = [user.first_name, user.last_name].filter(Boolean).join(" ") || "Unbekannt";
   approvedToday.push({ handle, name, userId });
+
+  // dauerhaft merken (für den /fehlen-Befehl)
+  await dbLoad();
+  if (rememberUser({ id: userId, handle, name })) await dbSave();
 
   // 3) Admin privat benachrichtigen
   const adminMsg =
@@ -446,6 +528,62 @@ app.post("/webhook", async (req, res) => {
           await sendTelegramMessage(chatId,
             `⚠️ Konnte nicht posten. Grund: ${result.description || "unbekannt"}\n\nStelle sicher, dass der Bot Admin im Hauptkanal ist und dort posten darf.`
           );
+        }
+      } else {
+        await sendWelcomeMenu(chatId);
+      }
+    } else if (text === "/fehlen") {
+      // Nur Besitzer: wer ist im Warteraum, aber NICHT im Hauptkanal?
+      if (String(chatId) === String(YOUR_CHAT_ID)) {
+        await dbLoad();
+        if (knownUsers.length === 0) {
+          await sendTelegramMessage(chatId,
+            `👥 <i>Noch niemand erfasst.</i>\n\nDer Bot merkt sich jeden, der ab jetzt über den Warteraum-Link beitritt. Wer schon vorher drin war, ist Telegram-bedingt nicht abrufbar.`
+          );
+          return res.json({ ok: true });
+        }
+        await sendTelegramMessage(chatId, `⏳ Prüfe ${knownUsers.length} Personen...`);
+        const missing = [];
+        for (const u of knownUsers) {
+          const inMain = await isInChat(MAIN_CHANNEL_ID, u.id);
+          if (!inMain) missing.push(u);
+          await new Promise(r => setTimeout(r, 120)); // Telegram nicht überlasten
+        }
+        if (missing.length === 0) {
+          await sendTelegramMessage(chatId,
+            `✅ <b>Alle im Hauptkanal!</b>\n\nVon ${knownUsers.length} erfassten Personen ist niemand mehr nur im Warteraum.`
+          );
+        } else {
+          // in Blöcke aufteilen, damit lange Listen nicht am Zeichenlimit scheitern
+          const lines = missing.map((u, i) => `${i + 1}. ${u.handle} / ${u.name}`);
+          const header = `⚠️ <b>Im Warteraum, aber NICHT im Hauptkanal (${missing.length} von ${knownUsers.length}):</b>\n\n`;
+          let block = header;
+          for (const line of lines) {
+            if ((block + line).length > 3800) {
+              await sendTelegramMessage(chatId, block);
+              block = "";
+            }
+            block += line + "\n";
+          }
+          if (block.trim()) await sendTelegramMessage(chatId, block);
+        }
+      } else {
+        await sendWelcomeMenu(chatId);
+      }
+    } else if (text === "/gespeichert") {
+      // Nur Besitzer: zeigt, wen der Bot aktuell im Speicher hat
+      if (String(chatId) === String(YOUR_CHAT_ID)) {
+        await dbLoad();
+        if (knownUsers.length === 0) {
+          await sendTelegramMessage(chatId, `📭 <i>Speicher ist leer.</i>`);
+        } else {
+          const lines = knownUsers.map((u, i) => `${i + 1}. ${u.handle} / ${u.name}`);
+          let block = `🗂 <b>Gespeichert: ${knownUsers.length} Personen</b>\n\n`;
+          for (const l of lines) {
+            if ((block + l).length > 3800) { await sendTelegramMessage(chatId, block); block = ""; }
+            block += l + "\n";
+          }
+          if (block.trim()) await sendTelegramMessage(chatId, block);
         }
       } else {
         await sendWelcomeMenu(chatId);

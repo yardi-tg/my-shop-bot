@@ -170,8 +170,9 @@ async function handleCodeRequest(chatId) {
 
 // ── Beitrittsanfrage annehmen + Admin privat benachrichtigen ──
 async function handleJoinRequest(joinReq) {
-  const chat = joinReq.chat;
-  const user = joinReq.from;
+  const chat = joinReq?.chat;
+  const user = joinReq?.from;
+  if (!chat?.id || !user?.id) return;   // unvollständiges Update -> ignorieren
   const chatId = chat.id;
   const userId = user.id;
 
@@ -304,7 +305,10 @@ app.post("/webhook", async (req, res) => {
     const message = update.message;
     if (!message) return res.json({ ok: true });
 
-    const chatId = message.chat.id;
+    // Manche Update-Typen haben kein chat-Objekt — sauber aussteigen statt Fehler werfen
+    const chatId = message.chat?.id;
+    if (!chatId) return res.json({ ok: true });
+
     const text = message.text || "";
     const firstName = message.from?.first_name || "there";
 
@@ -467,10 +471,11 @@ app.post("/webhook", async (req, res) => {
 app.post("/order", async (req, res) => {
   try {
     const order = req.body;
-    if (!order.items || order.items.length === 0) {
+    if (!order || !order.items || order.items.length === 0) {
       return res.status(400).json({ error: "Empty order" });
     }
-    const { user, items, total, currency, note } = order;
+    const { items, total, currency, note } = order;
+    const user = order.user || {};   // fehlende Nutzerdaten dürfen nicht abstürzen
     const itemLines = items
       .map((i) => `  • ${i.qty}x ${i.name}  —  ${currency} ${i.qty * i.price}`)
       .join("\n");

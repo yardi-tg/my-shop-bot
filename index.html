@@ -11,16 +11,16 @@
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
     :root {
-      --bg: #120404;
-      --surface: #2a0c0c;
-      --surface2: #3d1212;
-      --border: rgba(255,110,110,0.22);
-      --accent: #ff6b6b;
-      --accent2: #d81f1f;
-      --text: #ffeaea;
-      --muted: #b38686;
+      --bg: #030b1c;
+      --surface: #0c2145;
+      --surface2: #133463;
+      --border: rgba(110,185,255,0.22);
+      --accent: #6ec1ff;
+      --accent2: #1f7fe0;
+      --text: #eaf3ff;
+      --muted: #8aa6c8;
       --danger: #ff9a5a;
-      --star: #ff6b6b;
+      --star: #6ec1ff;
       --radius: 16px;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -36,27 +36,27 @@
     }
     .smoke-bg .s1 {
       width: 62vw; height: 62vw; left: 4%; top: 12%;
-      background: radial-gradient(circle at 42% 45%, rgba(255,205,205,0.15), rgba(230,90,90,0.08) 48%, transparent 72%);
+      background: radial-gradient(circle at 42% 45%, rgba(205,235,255,0.15), rgba(90,170,235,0.08) 48%, transparent 72%);
       animation: smokeA 52s ease-in-out infinite alternate;
     }
     .smoke-bg .s2 {
       width: 78vw; height: 78vw; right: -6%; top: 30%;
-      background: radial-gradient(circle at 55% 40%, rgba(255,180,180,0.10), rgba(200,55,55,0.06) 50%, transparent 74%);
+      background: radial-gradient(circle at 55% 40%, rgba(180,220,255,0.10), rgba(55,140,215,0.06) 50%, transparent 74%);
       animation: smokeB 68s ease-in-out infinite alternate;
     }
     .smoke-bg .s3 {
       width: 55vw; height: 55vw; left: 22%; bottom: 6%;
-      background: radial-gradient(circle at 48% 52%, rgba(255,225,225,0.13), rgba(240,110,110,0.07) 46%, transparent 70%);
+      background: radial-gradient(circle at 48% 52%, rgba(225,242,255,0.13), rgba(110,190,245,0.07) 46%, transparent 70%);
       animation: smokeC 60s ease-in-out infinite alternate;
     }
     .smoke-bg .s4 {
       width: 44vw; height: 44vw; right: 14%; bottom: 26%;
-      background: radial-gradient(circle at 50% 50%, rgba(255,195,195,0.09), rgba(185,45,45,0.05) 47%, transparent 72%);
+      background: radial-gradient(circle at 50% 50%, rgba(195,230,255,0.09), rgba(45,120,200,0.05) 47%, transparent 72%);
       animation: smokeD 45s ease-in-out infinite alternate;
     }
     .smoke-bg .s5 {
       width: 70vw; height: 70vw; left: -12%; top: 48%;
-      background: radial-gradient(circle at 46% 44%, rgba(255,215,215,0.14), rgba(235,100,100,0.07) 50%, transparent 74%);
+      background: radial-gradient(circle at 46% 44%, rgba(215,238,255,0.14), rgba(100,180,240,0.07) 50%, transparent 74%);
       animation: smokeE 75s ease-in-out infinite alternate;
     }
     @keyframes smokeA { from { transform: translate(-6vw,-4vh) scale(1) rotate(0deg); } to { transform: translate(20vw,10vh) scale(1.28) rotate(16deg); } }
@@ -70,8 +70,8 @@
     body {
       font-family: 'DM Sans', sans-serif;
       background:
-        radial-gradient(1100px 700px at 85% -10%, rgba(200,40,40,0.30), transparent 60%),
-        radial-gradient(900px 650px at -15% 108%, rgba(80,8,8,0.48), transparent 62%),
+        radial-gradient(1100px 700px at 85% -10%, rgba(40,120,220,0.32), transparent 60%),
+        radial-gradient(900px 650px at -15% 108%, rgba(6,26,80,0.48), transparent 62%),
         var(--bg);
       background-attachment: fixed;
       color: var(--text);
@@ -90,10 +90,10 @@
     }
     .header-title {
       font-family: 'Playfair Display', serif; font-size: 22px; letter-spacing: 0.5px;
-      background: linear-gradient(95deg, #fff0f0, #ff6b6b 45%, #a81212);
+      background: linear-gradient(95deg, #f0f8ff, #6ec1ff 45%, #1268c8);
       -webkit-background-clip: text; background-clip: text;
       -webkit-text-fill-color: transparent; color: transparent;
-      filter: drop-shadow(0 0 14px rgba(220,50,50,0.50));
+      filter: drop-shadow(0 0 14px rgba(50,140,230,0.52));
     }
     .cart-btn {
       position: relative; background: var(--surface2); border: 1px solid var(--border);
@@ -181,10 +181,10 @@
     .pt-collage-v3 video {
       width: 100%; height: 100%; min-width: 0; min-height: 0;
       object-fit: cover; object-position: center; pointer-events: none; display: block;
-      background: #2a0c0c;
+      background: #0c2145;
     }
     .pt-collage-v3 video:not(.loaded) {
-      background: linear-gradient(135deg, #2a0c0c 25%, #4a1616 50%, #2a0c0c 75%);
+      background: linear-gradient(135deg, #0c2145 25%, #16406e 50%, #0c2145 75%);
       background-size: 400% 400%;
       animation: vidShimmer 1.6s ease infinite;
     }
@@ -198,21 +198,21 @@
     .pt-from { font-size: 13px; font-weight: 700; color: var(--accent); margin-bottom: 8px; }
     .badge-import {
       font-size: 9px; font-weight: 700; letter-spacing: 0.5px;
-      background: rgba(255,110,110,0.14); color: var(--accent);
+      background: rgba(110,185,255,0.14); color: var(--accent);
       padding: 3px 8px; border-radius: 6px; text-transform: uppercase;
     }
     .pt-import {
       margin-top: 8px;
       padding: 6px 14px;
       border-radius: 50px;
-      border: 1px solid rgba(255,110,110,0.4);
-      background: linear-gradient(145deg, rgba(255,110,110,0.10), rgba(0,0,0,0.22));
-      box-shadow: 0 2px 12px rgba(255,110,110,0.14), inset 0 1px 0 rgba(255,255,255,0.06);
+      border: 1px solid rgba(110,185,255,0.4);
+      background: linear-gradient(145deg, rgba(110,185,255,0.10), rgba(0,0,0,0.22));
+      box-shadow: 0 2px 12px rgba(110,185,255,0.14), inset 0 1px 0 rgba(255,255,255,0.06);
       font-size: 11px; font-weight: 700; letter-spacing: 0.4px;
       display: inline-flex; align-items: center; gap: 5px;
     }
     .import-text {
-      background-image: linear-gradient(90deg, #ff6b6b, #ffa726, #ffee58, #66bb6a, #26c6da, #42a5f5, #7e57c2, #ec407a, #ff6b6b);
+      background-image: linear-gradient(90deg, #6ec1ff, #ffa726, #ffee58, #66bb6a, #26c6da, #42a5f5, #7e57c2, #ec407a, #6ec1ff);
       background-size: 200% auto;
       -webkit-background-clip: text; background-clip: text;
       -webkit-text-fill-color: transparent; color: transparent;
@@ -240,14 +240,14 @@
       margin-top: 10px;
       padding: 7px 16px;
       border-radius: 50px;
-      border: 1px solid rgba(255,110,110,0.45);
-      background: linear-gradient(145deg, rgba(255,110,110,0.12), rgba(0,0,0,0.25));
-      box-shadow: 0 3px 14px rgba(255,110,110,0.18), inset 0 1px 0 rgba(255,255,255,0.08);
+      border: 1px solid rgba(110,185,255,0.45);
+      background: linear-gradient(145deg, rgba(110,185,255,0.12), rgba(0,0,0,0.25));
+      box-shadow: 0 3px 14px rgba(110,185,255,0.18), inset 0 1px 0 rgba(255,255,255,0.08);
       font-size: 12px; font-weight: 700; letter-spacing: 0.4px;
       display: inline-flex; align-items: center; gap: 5px;
     }
     .pt-farm-text {
-      background-image: linear-gradient(90deg, #ff6b6b, #ffa726, #ffee58, #66bb6a, #26c6da, #42a5f5, #7e57c2, #ec407a, #ff6b6b);
+      background-image: linear-gradient(90deg, #6ec1ff, #ffa726, #ffee58, #66bb6a, #26c6da, #42a5f5, #7e57c2, #ec407a, #6ec1ff);
       background-size: 200% auto;
       -webkit-background-clip: text; background-clip: text;
       -webkit-text-fill-color: transparent; color: transparent;
@@ -262,8 +262,8 @@
     .product-page {
       position: fixed; inset: 0; z-index: 300;
       background:
-        radial-gradient(1100px 700px at 85% -10%, rgba(200,40,40,0.30), transparent 60%),
-        radial-gradient(900px 650px at -15% 108%, rgba(80,8,8,0.48), transparent 62%),
+        radial-gradient(1100px 700px at 85% -10%, rgba(40,120,220,0.32), transparent 60%),
+        radial-gradient(900px 650px at -15% 108%, rgba(6,26,80,0.48), transparent 62%),
         var(--bg);
       transform: translateX(100%);
       transition: transform 0.3s cubic-bezier(0.32,0.72,0,1);
@@ -323,12 +323,12 @@
       border-radius: 18px; border: 1px solid var(--border);
       flex-shrink: 0; scroll-snap-align: center;
       display: block; object-fit: cover; cursor: pointer;
-      background: #2a0c0c;
+      background: #0c2145;
       transform: translateZ(0);
     }
     /* shimmer ONLY until the video has data, then it stops (saves GPU while scrolling) */
     .pp-gvid:not(.loaded) {
-      background: linear-gradient(135deg, #2a0c0c 25%, #4a1616 50%, #2a0c0c 75%);
+      background: linear-gradient(135deg, #0c2145 25%, #16406e 50%, #0c2145 75%);
       background-size: 400% 400%;
       animation: vidShimmer 1.5s ease infinite;
     }
@@ -350,16 +350,16 @@
     .lo-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
     .lo-label { font-size: 12px; font-weight: 700; color: var(--accent); letter-spacing: 0.4px; text-transform: uppercase; }
     .lo-close {
-      background: rgba(255,110,110,0.10); border: 1px solid var(--border);
+      background: rgba(110,185,255,0.10); border: 1px solid var(--border);
       color: var(--accent); font-size: 15px; line-height: 1;
       width: 30px; height: 30px; border-radius: 50%; cursor: pointer;
       display: flex; align-items: center; justify-content: center;
       flex-shrink: 0; padding: 0; transition: transform 0.1s, background 0.15s;
     }
-    .lo-close:active { transform: scale(0.9); background: rgba(255,110,110,0.22); }
+    .lo-close:active { transform: scale(0.9); background: rgba(110,185,255,0.22); }
     .lo-items { font-size: 14px; color: var(--text); margin-bottom: 12px; line-height: 1.4; }
     .lo-btn {
-      width: 100%; background: var(--accent); color: #1a0505; border: none;
+      width: 100%; background: var(--accent); color: #04101f; border: none;
       border-radius: 12px; padding: 12px; font-family: 'DM Sans', sans-serif;
       font-size: 14px; font-weight: 700; cursor: pointer; letter-spacing: 0.3px;
       transition: transform 0.1s, box-shadow 0.2s;
@@ -370,10 +370,10 @@
     .pp-badges .pt-import, .pp-badges .pt-farm { margin-top: 0; }
     .pp-stars { display:inline-flex; align-items:center; gap:6px; }
     .pp-stars .rt { color: var(--muted); font-size: 13px; font-weight:600; }
-    .pp-note { margin: 8px 16px 0; padding: 12px 14px; background: rgba(255,110,110,0.08); border:1px solid var(--border); border-radius:12px; font-size:13px; color:var(--accent); text-align:center; }
+    .pp-note { margin: 8px 16px 0; padding: 12px 14px; background: rgba(110,185,255,0.08); border:1px solid var(--border); border-radius:12px; font-size:13px; color:var(--accent); text-align:center; }
     .pp-flavors-text { padding: 4px 16px 12px; font-size:14px; line-height:1.9; color:var(--text); font-weight:500; }
     .rainbow-text {
-      background: linear-gradient(180deg, #ff6b6b, #ffa726, #ffee58, #66bb6a, #26c6da, #42a5f5, #7e57c2, #ec407a, #ff6b6b);
+      background: linear-gradient(180deg, #6ec1ff, #ffa726, #ffee58, #66bb6a, #26c6da, #42a5f5, #7e57c2, #ec407a, #6ec1ff);
       background-size: 100% 300%;
       -webkit-background-clip: text; background-clip: text;
       -webkit-text-fill-color: transparent; color: transparent;
@@ -389,9 +389,9 @@
       background: var(--accent);
       border: 1.5px solid var(--accent); border-radius: 14px;
       display: flex; align-items: center; justify-content: center; gap: 10px;
-      font-size: 16px; font-weight: 700; color: #1a0505; cursor: pointer;
+      font-size: 16px; font-weight: 700; color: #04101f; cursor: pointer;
       transition: transform 0.1s, background 0.25s, color 0.25s;
-      box-shadow: 0 4px 16px rgba(255,110,110,0.25);
+      box-shadow: 0 4px 16px rgba(110,185,255,0.25);
     }
     .pp-menge-toggle:active { transform: scale(0.98); }
     /* OPEN state: transparent, violet outline only */
@@ -422,7 +422,7 @@
       border-bottom: 1px solid var(--border);
     }
     .variant:last-child { border-bottom: none; }
-    .variant.req { background: rgba(255,110,110,0.04); }
+    .variant.req { background: rgba(110,185,255,0.04); }
     .v-left { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
     .v-qty { font-size: 16px; font-weight: 600; color: var(--text); }
     .v-price { font-size: 14px; font-weight: 600; color: var(--accent); }
@@ -499,7 +499,7 @@
       background: var(--accent); color: #000; border-radius: 16px; padding: 15px 20px;
       display: none; align-items: center; justify-content: space-between;
       font-weight: 700; font-size: 15px; cursor: pointer; z-index: 150;
-      box-shadow: 0 8px 30px rgba(255,110,110,0.35);
+      box-shadow: 0 8px 30px rgba(110,185,255,0.35);
       transform: translateY(120px); transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1);
     }
     #floatingCart.show { display: flex; transform: translateY(0); }
@@ -510,7 +510,7 @@
     /* LOCK SCREEN */
     @keyframes shake { 0%,100%{transform:translateX(0);} 20%{transform:translateX(-8px);} 40%{transform:translateX(8px);} 60%{transform:translateX(-6px);} 80%{transform:translateX(6px);} }
     .shake-error { animation: shake 0.4s ease !important; }
-    #codeInput:focus { border-color: #ff6b6b !important; box-shadow: 0 0 16px rgba(220,50,50,0.50); }
+    #codeInput:focus { border-color: #6ec1ff !important; box-shadow: 0 0 16px rgba(50,140,230,0.52); }
     #matrixCanvas { position: fixed; inset: 0; z-index: 600; display: none; background: #000; }
   </style>
 </head>
@@ -525,12 +525,12 @@
   <div class="smoke-bg" aria-hidden="true"><span class="s1"></span><span class="s2"></span><span class="s3"></span><span class="s4"></span><span class="s5"></span></div>
 
   <!-- LOCK SCREEN -->
-  <div id="lockScreen" style="position:fixed;inset:0;background:radial-gradient(900px 600px at 80% -5%, rgba(200,40,40,0.30), transparent 60%),radial-gradient(800px 550px at -10% 105%, rgba(80,8,8,0.50), transparent 62%),#120404;z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;text-align:center;transition:opacity 0.6s ease;">
+  <div id="lockScreen" style="position:fixed;inset:0;background:radial-gradient(900px 600px at 80% -5%, rgba(40,120,220,0.32), transparent 60%),radial-gradient(800px 550px at -10% 105%, rgba(6,26,80,0.50), transparent 62%),#030b1c;z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;text-align:center;transition:opacity 0.6s ease;">
     <div id="lockIcon" style="font-size:56px;margin-bottom:20px;transition:all 0.3s;">🔒</div>
-    <div style="font-family:'Playfair Display',serif;font-size:28px;background:linear-gradient(95deg,#fff0f0,#ff6b6b 45%,#a81212);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;filter:drop-shadow(0 0 16px rgba(220,50,50,0.55));margin-bottom:8px;letter-spacing:0.5px;">Blocktheke</div>
-    <div style="color:#b38686;font-size:13px;margin-bottom:32px;letter-spacing:1px;">ZUGANGSCODE EINGEBEN</div>
-    <input id="codeInput" type="text" inputmode="numeric" maxlength="4" placeholder="••••" style="background:rgba(42,12,12,0.85);border:2px solid rgba(255,110,110,0.32);color:#ff6b6b;border-radius:14px;padding:16px 20px;font-size:28px;text-align:center;letter-spacing:12px;width:170px;outline:none;margin-bottom:20px;font-family:'DM Sans',sans-serif;" />
-    <button id="unlockBtn" style="background:linear-gradient(135deg,#ff6b6b,#a81212);color:#1a0505;border:none;border-radius:14px;box-shadow:0 6px 22px rgba(190,35,35,0.42);padding:15px 40px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;cursor:pointer;letter-spacing:1px;">🔓 ENTSPERREN</button>
+    <div style="font-family:'Playfair Display',serif;font-size:28px;background:linear-gradient(95deg,#f0f8ff,#6ec1ff 45%,#1268c8);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;filter:drop-shadow(0 0 16px rgba(50,140,230,0.55));margin-bottom:8px;letter-spacing:0.5px;">Blocktheke</div>
+    <div style="color:#8aa6c8;font-size:13px;margin-bottom:32px;letter-spacing:1px;">ZUGANGSCODE EINGEBEN</div>
+    <input id="codeInput" type="text" inputmode="numeric" maxlength="4" placeholder="••••" style="background:rgba(12,33,69,0.85);border:2px solid rgba(110,185,255,0.32);color:#6ec1ff;border-radius:14px;padding:16px 20px;font-size:28px;text-align:center;letter-spacing:12px;width:170px;outline:none;margin-bottom:20px;font-family:'DM Sans',sans-serif;" />
+    <button id="unlockBtn" style="background:linear-gradient(135deg,#6ec1ff,#1268c8);color:#04101f;border:none;border-radius:14px;box-shadow:0 6px 22px rgba(35,110,200,0.45);padding:15px 40px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;cursor:pointer;letter-spacing:1px;">🔓 ENTSPERREN</button>
     <div id="lockError" style="color:#e07070;font-size:13px;margin-top:16px;display:none;"></div>
   </div>
   <canvas id="matrixCanvas"></canvas>
@@ -765,7 +765,7 @@
       if (!running) return;
       ctx.fillStyle = "rgba(11,6,20,0.10)";
       ctx.fillRect(0,0,canvas.width,canvas.height);
-      ctx.fillStyle = "#ff5555"; ctx.font = fontSize + "px monospace";
+      ctx.fillStyle = "#55b8ff"; ctx.font = fontSize + "px monospace";
       for (let i=0;i<drops.length;i++){
         const ch = chars[Math.floor(Math.random()*chars.length)];
         ctx.fillText(ch, i*fontSize, drops[i]*fontSize);
@@ -838,8 +838,8 @@
       const data = await res.json();
       if (data.valid) {
         lockIcon.textContent = "🔓";
-        input.style.borderColor = "#ff5555"; input.style.boxShadow = "0 0 22px rgba(255,110,110,0.45)";
-        btn.textContent = "ACCESS GRANTED"; btn.style.background = "#ff5555"; btn.style.color = "#1a0505"; btn.style.fontFamily = "monospace";
+        input.style.borderColor = "#55b8ff"; input.style.boxShadow = "0 0 22px rgba(110,185,255,0.45)";
+        btn.textContent = "ACCESS GRANTED"; btn.style.background = "#55b8ff"; btn.style.color = "#04101f"; btn.style.fontFamily = "monospace";
         startMatrixSequence();
       } else {
         btn.textContent = "🔓 ENTSPERREN"; btn.disabled = false;
@@ -848,7 +848,7 @@
         input.style.borderColor = "#e07070"; input.value = "";
         input.classList.remove("shake-error"); void input.offsetWidth; input.classList.add("shake-error");
         lockIcon.textContent = "🔒";
-        setTimeout(()=>{ input.style.borderColor = "rgba(255,110,110,0.32)"; },1000);
+        setTimeout(()=>{ input.style.borderColor = "rgba(110,185,255,0.32)"; },1000);
       }
     } catch(e) {
       btn.textContent = "🔓 ENTSPERREN"; btn.disabled = false;

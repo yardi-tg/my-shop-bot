@@ -30,6 +30,41 @@
       position: fixed; inset: -25%; z-index: 900;
       pointer-events: none; overflow: hidden;
     }
+    /* ── Echter Rauch NUR auf dem Lock-Screen ──────────────────
+       Foto auf schwarzem Grund + mix-blend-mode:screen -> Schwarz wird
+       unsichtbar, nur der Rauch bleibt. Bewegt wird ausschliesslich per
+       transform (GPU) — kein Filter, der pro Bild neu gerechnet wird.
+       z-index:-1 haelt die Schwaden hinter Titel, Eingabefeld und Button. */
+    #lockScreen::before, #lockScreen::after {
+      content: "";
+      position: absolute;
+      top: -8%; bottom: -8%; left: 0;
+      width: 200%;
+      background-image: url("https://cdn.jsdelivr.net/gh/yardi-tg/my-shop-bot@main/smoke.webp");
+      background-repeat: repeat-x;
+      background-size: 50% 100%;   /* eine Kachel = Bildschirmbreite -> nahtlose Schleife */
+      mix-blend-mode: screen;
+      pointer-events: none;
+      z-index: -1;
+      will-change: transform;
+      transform: translateZ(0);
+    }
+    #lockScreen::before {
+      opacity: 0.30;
+      animation: lockSmokeDrift 62s linear infinite;
+    }
+    #lockScreen::after {
+      opacity: 0.16;
+      background-position: 37% 0;  /* anderer Ausschnitt = wirkt wie zweite Ebene */
+      animation: lockSmokeDrift 104s linear infinite;
+    }
+    @keyframes lockSmokeDrift {
+      from { transform: translate3d(0, 0, 0); }
+      to   { transform: translate3d(-50%, 0, 0); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      #lockScreen::before, #lockScreen::after { animation: none; }
+    }
     .smoke-bg span {
       position: absolute; display: block; border-radius: 50%;
       will-change: transform;

@@ -493,17 +493,17 @@ app.post("/webhook", async (req, res) => {
         }
         const hkText =
           `🛒 <b>Unser aktuelles Sortiment</b>\n\n` +
-          `🧙‍♂️🌲 <b>Wizard Trees</b> — OG Exotics USA Cali\n` +
+          `🧙‍♂️🌲 <b>Wizard Trees</b> — OG Exotics\n` +
           `🇺🇸 USA Import\n\n` +
-          `💨🖊️ <b>THC Vapes</b> — Whole Melt (20 Flavours)\n` +
+          `💨🖊️ <b>THC Vapes</b> — Whole Melt\n` +
+          `(20 Flavours)\n` +
           `🇺🇸 USA Import\n\n` +
           `🥶❄️ <b>Fresh Frozen</b> — Hash Burger\n` +
           `💎 Secret Farm\n\n` +
           `2️⃣⚡ <b>Double Static</b> — Forbidden Fruit\n` +
           `💎 Secret Farm\n\n` +
-          `━━━━━━━━━━━━━━\n\n` +
-          `⚠️ <b>Fragen, Probleme, Fehler oder Verbesserungen?</b>\n` +
-          `Melde dich direkt bei mir 👉 @mi1lord9\n\n` +
+          `━━━━━━━━━━━━━━━━━━━━━\n\n` +
+          `Bei Fragen, Probleme, Fehler oder Verbesserungen? Melde dich direkt bei mir 👉 @mi1lord9\n\n` +
           `📱 Alles Weitere in der Mini-App — Videos, Preise, Varianten. Bestellen geht dort auch direkt.`;
         const postRes = await fetch(`${TELEGRAM_API}/sendMessage`, {
           method: "POST",

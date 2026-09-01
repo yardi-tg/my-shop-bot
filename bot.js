@@ -26,7 +26,7 @@ const WAITING_ROOM_CHAT_ID = ""; // z.B. "-1001234567890" — leer = überall
 const WAITING_ROOM_POST_ID = "-1003955096282";          // Kanal, in den gepostet wird
 const MAIN_CHANNEL_URL = "https://t.me/+xTzxPx24HoBjMDJk"; // Button-Ziel (Hauptkanal)
 const MAIN_CHANNEL_ID = "-1004383770209";   // Chat-ID des Hauptkanals
-const BOT_USERNAME = "Arbeitertheke_bot";                  // für den Shop-Button im Hauptkanal-Post
+const BOT_USERNAME = "Blocktheke_bot";                     // für den Shop-Button im Hauptkanal-Post
 // Liste der heute akzeptierten Personen (für "/code" Übersicht)
 let approvedToday = [];
 let approvedDay = new Date().toISOString().slice(0, 10);

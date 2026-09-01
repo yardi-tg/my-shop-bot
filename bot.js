@@ -588,6 +588,29 @@ app.post("/webhook", async (req, res) => {
       } else {
         await sendWelcomeMenu(chatId);
       }
+    } else if (text === "/befehle") {
+      // Nur Besitzer: Übersicht aller Befehle. Alle anderen sehen nur das
+      // normale Menü — so ist nicht erkennbar, dass es diesen Befehl gibt.
+      if (String(chatId) === String(YOUR_CHAT_ID)) {
+        await sendTelegramMessage(chatId,
+          `📋 <b>Deine Befehle</b>\n\n` +
+          `🔒 <b>Nur für dich</b>\n` +
+          `/code — heutiger Zugangscode\n` +
+          `/heute — wer heute im Warteraum angenommen wurde\n` +
+          `/fehlen — im Warteraum, aber nicht im Hauptkanal\n` +
+          `/gespeichert — wen der Bot im Speicher hat\n` +
+          `/wartezimmer — Willkommensnachricht in den Warteraum posten\n` +
+          `/hauptkanal — Sortiment in den Hauptkanal posten\n` +
+          `/befehle — diese Übersicht\n\n` +
+          `👥 <b>Für alle sichtbar</b>\n` +
+          `/start — Willkommensmenü\n` +
+          `/menu — Shop öffnen\n` +
+          `/contact — Kontakt\n\n` +
+          `<i>Kunden, die einen deiner privaten Befehle tippen, sehen nur das normale Menü.</i>`
+        );
+      } else {
+        await sendWelcomeMenu(chatId);
+      }
     } else if (text === "/contact") {
       await sendTelegramMessage(
         chatId,

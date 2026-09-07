@@ -31,26 +31,65 @@ const BOT_USERNAME = "Arbeiter4_bot";                      // für den Shop-Butt
 let approvedToday = [];
 let approvedDay = new Date().toISOString().slice(0, 10);
 
-// ── Dauerhafte Liste aller Warteraum-Beitritte ────────────────
+// ── Dauerhafter Speicher: bekannte Nutzer + Sterne ────────────
 // Telegram erlaubt Bots NICHT, Mitgliederlisten abzurufen. Deshalb merkt sich
-// der Bot jeden, der über den Warteraum-Link beitritt. Gespeichert wird in einer
-// angepinnten Nachricht im Besitzer-Chat — die überlebt Server-Neustarts.
-let knownUsers = [];        // [{ id, handle, name }]
+// der Bot jeden, der ihm schreibt oder dem Warteraum beitritt — samt Sternestand.
+// Gespeichert in EINER angepinnten Nachricht im Besitzer-Chat (überlebt Neustarts).
+// Oben die lesbare Übersicht, unten die Rohdaten zum Wiedereinlesen.
+let knownUsers = [];        // [{ id, handle, name, stars }]
 let dbMessageId = null;     // ID der angepinnten Speicher-Nachricht
 let dbLoaded = false;
-const DB_MARKER = "🗂 BLOCKTHEKE-SPEICHER (nicht löschen)";
+let lastBackupDay = null;   // Datum der letzten täglichen Sicherung
+const DB_MARKER = "⭐ BLOCKTHEKE-SPEICHER (nicht löschen)";
+const DB_SEP = "─────────────";
+const STARS_GOAL = 10;      // Sterne bis zum Gratis-Raucher
 
+// Baut die angepinnte Nachricht: schöne Übersicht + Rohdaten darunter
 function usersToText() {
-  const lines = knownUsers.map(u => `${u.id}|${u.handle}|${u.name}`);
-  return `${DB_MARKER}\n${lines.join("\n")}`;
+  const withStars = knownUsers.filter(u => (u.stars || 0) > 0);
+  const full = withStars.filter(u => (u.stars || 0) >= STARS_GOAL);
+  const close = withStars.filter(u => (u.stars || 0) >= 6 && (u.stars || 0) < STARS_GOAL);
+  const going = withStars.filter(u => (u.stars || 0) < 6);
+  const now = new Date().toLocaleString("de-CH", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+
+  let view = `${DB_MARKER}\nStand ${now}  #bk:${lastBackupDay || "-"}\n`;
+  if (withStars.length === 0) {
+    view += `\nNoch keine Sterne vergeben.\n`;
+  } else {
+    const line = u => `${u.handle} — ${u.stars || 0}/${STARS_GOAL}`;
+    if (full.length)  view += `\n🎉 VOLL (${full.length})\n` + full.map(line).join("\n") + "\n";
+    if (close.length) view += `\nKURZ DAVOR\n` + close.map(line).join("\n") + "\n";
+    if (going.length) view += `\nUNTERWEGS\n` + going.map(line).join("\n") + "\n";
+  }
+  view += `\nErfasst: ${knownUsers.length} Personen\n${DB_SEP}\n`;
+  view += knownUsers.map(u => `${u.id}|${u.handle}|${u.name}|${u.stars || 0}`).join("\n");
+  return view;
 }
+
+// Liest die Rohdaten unterhalb der Trennlinie wieder ein
 function textToUsers(text) {
   if (!text || !text.startsWith(DB_MARKER)) return null;
-  return text.split("\n").slice(1).filter(Boolean).map(line => {
-    const [id, handle, ...rest] = line.split("|");
-    return { id, handle: handle || "kein Username", name: rest.join("|") || "Unbekannt" };
-  });
+  const idx = text.indexOf(DB_SEP);
+  if (idx === -1) return null;
+  const rows = text.slice(idx + DB_SEP.length).split("\n").filter(l => l.trim());
+  const out = [];
+  for (const line of rows) {
+    const parts = line.split("|");
+    if (parts.length < 3) continue;
+    const id = parts[0].trim();
+    if (!/^\d+$/.test(id)) continue;          // keine gültige ID -> überspringen
+    const stars = parseInt(parts[parts.length - 1], 10);
+    const hasStars = !isNaN(stars) && parts.length >= 4;
+    out.push({
+      id,
+      handle: parts[1] || "kein Username",
+      name: (hasStars ? parts.slice(2, -1) : parts.slice(2)).join("|") || "Unbekannt",
+      stars: hasStars ? stars : 0,
+    });
+  }
+  return out.length ? out : null;
 }
+
 async function dbLoad() {
   if (dbLoaded) return;
   dbLoaded = true;
@@ -59,14 +98,18 @@ async function dbLoad() {
     const j = await r.json();
     const pinned = j?.result?.pinned_message;
     const parsed = pinned ? textToUsers(pinned.text) : null;
-    if (parsed) { knownUsers = parsed; dbMessageId = pinned.message_id; }
+    if (parsed) {
+      knownUsers = parsed;
+      dbMessageId = pinned.message_id;
+      const bk = (pinned.text.match(/#bk:(\d{4}-\d{2}-\d{2})/) || [])[1];
+      if (bk) lastBackupDay = bk;   // überlebt Server-Neustarts
+    }
   } catch (e) { console.error("dbLoad:", e.message); }
 }
+
 async function dbSave() {
   try {
-    const text = usersToText();
-    if (text.length > 4000) {
-      // Telegram-Nachrichten sind auf 4096 Zeichen begrenzt
+    if (usersToText().length > 4000) {
       console.warn("Speicher fast voll — älteste Einträge werden verworfen");
       knownUsers = knownUsers.slice(-100);
     }
@@ -77,6 +120,8 @@ async function dbSave() {
       });
       const j = await r.json();
       if (j.ok) return;
+      // "message is not modified" ist kein Fehler — Nachricht existiert weiter
+      if (j.description && j.description.includes("not modified")) return;
       dbMessageId = null; // Nachricht weg -> neu anlegen
     }
     const r2 = await fetch(`${TELEGRAM_API}/sendMessage`, {
@@ -93,9 +138,84 @@ async function dbSave() {
     }
   } catch (e) { console.error("dbSave:", e.message); }
 }
+
+// Sucht eine Person per @handle oder ID unter den bekannten Nutzern
+function findUser(query) {
+  const q = String(query).trim().replace(/^@/, "").toLowerCase();
+  return knownUsers.find(u =>
+    String(u.id) === q || String(u.handle).replace(/^@/, "").toLowerCase() === q
+  ) || null;
+}
+
+// ── Dialogzustand für /sterne (Schritt für Schritt) ───────────
+// Läuft nur im Besitzer-Chat. Verfällt nach 10 Minuten und bei Neustart.
+let starDialog = null;   // { step: "wer"|"wieviel", target, since }
+let restoreWaiting = false;   // wartet auf zurückgeschickte Sicherung
+const DIALOG_TIMEOUT = 10 * 60 * 1000;
+
+function dialogAlive() {
+  if (!starDialog) return false;
+  if (Date.now() - starDialog.since > DIALOG_TIMEOUT) { starDialog = null; return false; }
+  return true;
+}
+
+// Schreibt dem Kunden. Gibt zurück, ob die Nachricht ankam.
+async function notifyCustomer(user, text) {
+  try {
+    const r = await fetch(`${TELEGRAM_API}/sendMessage`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: user.id, text, parse_mode: "HTML" }),
+    });
+    const j = await r.json();
+    return !!j.ok;
+  } catch (e) { return false; }
+}
+
+// Vergibt Sterne, benachrichtigt den Kunden, meldet dir das Ergebnis zurück
+async function giveStars(user, amount) {
+  const before = user.stars || 0;
+  const after = before + amount;
+  let reached = false;
+
+  if (after >= STARS_GOAL) {
+    reached = true;
+    user.stars = 0;                       // nach dem Glückwunsch wieder bei 0
+  } else {
+    user.stars = Math.max(0, after);
+  }
+  await dbSave();
+
+  const kundeText = reached
+    ? `🎉 <b>Deine Karte ist voll!</b>\n\n` +
+      `<b>${STARS_GOAL} von ${STARS_GOAL}</b> — dein nächster Raucher geht <b>aufs Haus</b>. 🔥\n\n` +
+      `Melde dich einfach bei deiner nächsten Bestellung.\n👉 @mi1lord9`
+    : `⭐ <b>Du hast ${amount} Stern${amount === 1 ? "" : "e"} bekommen!</b>\n\n` +
+      `Dein Stand: <b>${user.stars} von ${STARS_GOAL}</b>\n` +
+      `Noch <b>${STARS_GOAL - user.stars} Stern${STARS_GOAL - user.stars === 1 ? "" : "e"}</b>, dann geht der nächste Raucher aufs Haus. 🔥\n\n` +
+      `Fragen? 👉 @mi1lord9`;
+
+  const delivered = await notifyCustomer(user, kundeText);
+
+  let report = reached
+    ? `🎉 <b>${user.handle} hat die Karte voll!</b>\n` +
+      `${user.name} · Zähler steht wieder auf <b>0</b>\n`
+    : `✅ <b>${amount} Stern${amount === 1 ? "" : "e"} an ${user.handle}</b>\n` +
+      `${user.name} · Stand: <b>${user.stars} von ${STARS_GOAL}</b>\n`;
+  report += delivered
+    ? `📬 Nachricht zugestellt`
+    : `⚠️ <b>Nachricht NICHT zustellbar</b> — ${user.handle} hat den Bot nie gestartet oder blockiert. Bitte selbst informieren.`;
+  return report;
+}
+
 function rememberUser(u) {
-  if (knownUsers.some(x => String(x.id) === String(u.id))) return false;
-  knownUsers.push(u);
+  const found = knownUsers.find(x => String(x.id) === String(u.id));
+  if (found) {
+    // Namen/Handle auffrischen, Sterne behalten
+    if (u.handle && u.handle !== "kein Username") found.handle = u.handle;
+    if (u.name && u.name !== "Unbekannt") found.name = u.name;
+    return false;
+  }
+  knownUsers.push({ ...u, stars: u.stars || 0 });
   return true;
 }
 // Prüft für EINEN bekannten Nutzer, ob er im angegebenen Kanal ist
@@ -410,6 +530,78 @@ app.post("/webhook", async (req, res) => {
       return res.json({ ok: true });
     }
 
+    // ── Zurückgeschickte Sicherung einlesen (nur Besitzer) ──
+    if (String(chatId) === String(YOUR_CHAT_ID) && text && text.startsWith(DB_MARKER)) {
+      const parsed = textToUsers(text);
+      if (!parsed) {
+        await sendTelegramMessage(chatId,
+          `⚠️ <b>Konnte die Sicherung nicht lesen.</b>\n\n` +
+          `Der Datenteil unter der Trennlinie fehlt oder wurde verändert. ` +
+          `Bitte eine unveränderte Sicherung schicken.`
+        );
+        restoreWaiting = false;
+        return res.json({ ok: true });
+      }
+      knownUsers = parsed;
+      dbMessageId = null;          // neu senden + anpinnen erzwingen
+      dbLoaded = true;
+      restoreWaiting = false;
+      await dbSave();
+      const mitSternen = knownUsers.filter(u => (u.stars || 0) > 0).length;
+      await sendTelegramMessage(chatId,
+        `♻️ <b>Speicher wiederhergestellt</b>\n\n` +
+        `${knownUsers.length} Personen eingelesen, davon <b>${mitSternen}</b> mit Sternen.\n` +
+        `Die neue Übersicht ist angepinnt.`
+      );
+      return res.json({ ok: true });
+    }
+
+    // ── Laufender /sterne-Dialog (nur Besitzer) ──
+    if (String(chatId) === String(YOUR_CHAT_ID) && dialogAlive() && text && !text.startsWith("/")) {
+      await dbLoad();
+      if (starDialog.step === "wer") {
+        const user = findUser(text);
+        if (!user) {
+          await sendTelegramMessage(chatId,
+            `❓ <b>${text}</b> kenne ich nicht.\n\n` +
+            `Ich kenne nur Leute, die mir schon geschrieben haben oder dem Warteraum beigetreten sind. ` +
+            `Versuche es mit der User-ID, oder tippe /abbrechen.`
+          );
+          return res.json({ ok: true });
+        }
+        starDialog.target = user;
+        starDialog.step = "wieviel";
+        starDialog.since = Date.now();
+        await sendTelegramMessage(chatId,
+          `👤 <b>${user.handle}</b> (${user.name})\n` +
+          `Aktueller Stand: <b>${user.stars || 0} von ${STARS_GOAL}</b>\n\n` +
+          `Wie viele Sterne soll er bekommen?`
+        );
+        return res.json({ ok: true });
+      }
+      if (starDialog.step === "wieviel") {
+        const amount = parseInt(text.trim(), 10);
+        if (isNaN(amount) || amount === 0) {
+          await sendTelegramMessage(chatId, `❓ Bitte eine Zahl schicken (z.B. <code>2</code>), oder /abbrechen.`);
+          return res.json({ ok: true });
+        }
+        const user = starDialog.target;
+        const current = user.stars || 0;
+        if (current + amount > STARS_GOAL) {
+          await sendTelegramMessage(chatId,
+            `⚠️ <b>Geht nicht</b> — ${user.handle} hat <b>${current}</b>, mit ${amount} wären es ${current + amount}.\n` +
+            `Maximal möglich: <b>${STARS_GOAL - current}</b>\n\n` +
+            `Schick die richtige Zahl, oder /abbrechen.`
+          );
+          return res.json({ ok: true });
+        }
+        starDialog = null;
+        const report = await giveStars(user, amount);
+        await sendTelegramMessage(chatId, report);
+        return res.json({ ok: true });
+      }
+    }
+
     if (text === "/start") {
       setShopMenuButton(); // Button sicherheitshalber (neu) setzen
       await sendWelcomeMenu(chatId);
@@ -594,7 +786,11 @@ app.post("/webhook", async (req, res) => {
       if (String(chatId) === String(YOUR_CHAT_ID)) {
         await sendTelegramMessage(chatId,
           `📋 <b>Deine Befehle</b>\n\n` +
-          `🔒 <b>Nur für dich</b>\n` +
+          `⭐ <b>Sterne</b>\n` +
+          `/sterne — Sterne vergeben (fragt Schritt für Schritt)\n` +
+          `/abbrechen — laufenden Vorgang abbrechen\n` +
+          `/sternesystem — Speicher aus einer Sicherung wiederherstellen\n\n` +
+          `🔒 <b>Verwaltung</b>\n` +
           `/code — heutiger Zugangscode\n` +
           `/heute — wer heute im Warteraum angenommen wurde\n` +
           `/fehlen — im Warteraum, aber nicht im Hauptkanal\n` +
@@ -607,6 +803,37 @@ app.post("/webhook", async (req, res) => {
           `/menu — Shop öffnen\n` +
           `/contact — Kontakt\n\n` +
           `<i>Kunden, die einen deiner privaten Befehle tippen, sehen nur das normale Menü.</i>`
+        );
+      } else {
+        await sendWelcomeMenu(chatId);
+      }
+    } else if (text === "/sterne") {
+      if (String(chatId) === String(YOUR_CHAT_ID)) {
+        await dbLoad();
+        starDialog = { step: "wer", target: null, since: Date.now() };
+        await sendTelegramMessage(chatId,
+          `⭐ <b>Sterne vergeben</b>\n\nWer soll die Sterne bekommen?\n` +
+          `<i>Schick @Username oder die User-ID. Abbrechen mit /abbrechen.</i>`
+        );
+      } else {
+        await sendWelcomeMenu(chatId);
+      }
+    } else if (text === "/abbrechen") {
+      if (String(chatId) === String(YOUR_CHAT_ID)) {
+        if (starDialog) { starDialog = null; await sendTelegramMessage(chatId, `❌ Abgebrochen.`); }
+        else await sendTelegramMessage(chatId, `<i>Es läuft gerade nichts.</i>`);
+      } else {
+        await sendWelcomeMenu(chatId);
+      }
+    } else if (text === "/sternesystem") {
+      if (String(chatId) === String(YOUR_CHAT_ID)) {
+        restoreWaiting = true;
+        await sendTelegramMessage(chatId,
+          `♻️ <b>Speicher wiederherstellen</b>\n\n` +
+          `Schick mir jetzt eine der täglichen Sicherungen (die Nachricht, die mit ` +
+          `„${DB_MARKER}" beginnt).\n\n` +
+          `Ich lese sie ein, schicke sie neu und pinne sie an.\n` +
+          `<i>Abbrechen mit /abbrechen.</i>`
         );
       } else {
         await sendWelcomeMenu(chatId);
@@ -671,7 +898,35 @@ app.get("/", (req, res) => {
 
 // ── Start server ──────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
+// ── Tägliche Sicherung um Mitternacht UTC (mit dem neuen Tagescode) ──
+// Der Render-Free-Server schläft ein; deshalb prüfen wir bei jeder Gelegenheit,
+// ob der Tag gewechselt hat, und holen die Sicherung notfalls verspätet nach.
+async function dailyBackup() {
+  try {
+    await dbLoad();                       // ZUERST laden — sonst überschreibt
+    const today = new Date().toISOString().slice(0, 10);   // dbLoad das Datum wieder
+    if (lastBackupDay === today) return;  // heute schon gesichert
+    lastBackupDay = today;
+    await dbSave();                       // Datum in der Übersicht festhalten
+
+    const mitSternen = knownUsers.filter(u => (u.stars || 0) > 0).length;
+    await sendTelegramMessage(YOUR_CHAT_ID,
+      `🔑 <b>Heutiger Zugangscode:</b> <code>${getTodaysCode()}</code>\n\n` +
+      `<i>Tägliche Sicherung — ${knownUsers.length} Personen, ${mitSternen} mit Sternen. ` +
+      `Diese Nachricht aufbewahren: Falls die angepinnte Übersicht verloren geht, ` +
+      `mit /sternesystem und der folgenden Nachricht wiederherstellen.</i>`
+    );
+    // Die Sicherung selbst OHNE HTML senden — Namen könnten < > & enthalten
+    await fetch(`${TELEGRAM_API}/sendMessage`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: YOUR_CHAT_ID, text: usersToText(), disable_notification: true }),
+    });
+  } catch (e) { console.error("dailyBackup:", e.message); }
+}
+setInterval(dailyBackup, 15 * 60 * 1000);   // alle 15 Min prüfen, ob neuer Tag
+
 app.listen(PORT, () => {
   console.log(`🚀 Bot-Backend läuft auf Port ${PORT}`);
   setShopMenuButton(); // dauerhaften Shop-Button setzen
+  setTimeout(dailyBackup, 5000);  // nachholen, falls der Server nachts schlief
 });

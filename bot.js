@@ -695,6 +695,9 @@ app.post("/webhook", async (req, res) => {
           `2️⃣⚡ <b>Double Static</b> — Forbidden Fruit\n` +
           `💎 Secret Farm\n\n` +
           `━━━━━━━━━━━━━━━━━━━━━\n\n` +
+          `📌 <b>Aktueller Shop-Bot</b>\n\n` +
+          `Den Bot, der unsere Mini-App hostet, findest du immer über den Button unten.\n\n` +
+          `Bots werden regelmässig gewechselt — schau also hier nach, falls ein alter Link nicht mehr geht.\n\n` +
           `Bei Fragen, Probleme, Fehler oder Verbesserungen? Melde dich direkt bei mir 👉 @mi1lord9\n\n` +
           `📱 Alles Weitere in der Mini-App — Videos, Preise, Varianten. Bestellen geht dort auch direkt.`;
         const postRes = await fetch(`${TELEGRAM_API}/sendMessage`, {

@@ -765,6 +765,50 @@ app.post("/webhook", async (req, res) => {
       } else {
         await sendWelcomeMenu(chatId);
       }
+    } else if (text === "/sternestand") {
+      // Nur Besitzer: schön aufbereitete Sterne-Übersicht auf Abruf
+      if (String(chatId) === String(YOUR_CHAT_ID)) {
+        await dbLoad();
+        const mit = knownUsers.filter(u => (u.stars || 0) > 0)
+                              .sort((a, b) => (b.stars || 0) - (a.stars || 0));
+        if (mit.length === 0) {
+          await sendTelegramMessage(chatId,
+            `⭐ <b>Sterne-Übersicht</b>\n\n<i>Noch niemand hat Sterne.</i>\n\n` +
+            `Erfasste Personen: ${knownUsers.length}`
+          );
+          return res.json({ ok: true });
+        }
+        const voll  = mit.filter(u => u.stars >= STARS_GOAL);
+        const nah   = mit.filter(u => u.stars >= 6 && u.stars < STARS_GOAL);
+        const start = mit.filter(u => u.stars < 6);
+        // Sterne als Balken: ★ für vergeben, ☆ für offen
+        const zeile = u => {
+          const s = u.stars || 0;
+          const bar = "★".repeat(s) + "☆".repeat(Math.max(0, STARS_GOAL - s));
+          const fehlt = STARS_GOAL - s;
+          return `${u.handle}\n${bar}  <b>${s}/${STARS_GOAL}</b>` +
+                 (fehlt > 0 ? `  <i>(noch ${fehlt})</i>` : ``);
+        };
+        let out = `⭐ <b>Sterne-Übersicht</b>\n`;
+        if (voll.length)  out += `\n🎉 <b>KARTE VOLL (${voll.length})</b>\n` + voll.map(zeile).join("\n\n") + `\n`;
+        if (nah.length)   out += `\n🔥 <b>KURZ DAVOR</b>\n` + nah.map(zeile).join("\n\n") + `\n`;
+        if (start.length) out += `\n<b>UNTERWEGS</b>\n` + start.map(zeile).join("\n\n") + `\n`;
+        out += `\n─────────────\n` +
+               `Mit Sternen: <b>${mit.length}</b> · Erfasst gesamt: ${knownUsers.length}`;
+        // lange Listen in Blöcke teilen (Telegram-Limit)
+        if (out.length <= 3800) {
+          await sendTelegramMessage(chatId, out);
+        } else {
+          let block = "";
+          for (const line of out.split("\n")) {
+            if ((block + line).length > 3800) { await sendTelegramMessage(chatId, block); block = ""; }
+            block += line + "\n";
+          }
+          if (block.trim()) await sendTelegramMessage(chatId, block);
+        }
+      } else {
+        await sendWelcomeMenu(chatId);
+      }
     } else if (text === "/gespeichert") {
       // Nur Besitzer: zeigt, wen der Bot aktuell im Speicher hat
       if (String(chatId) === String(YOUR_CHAT_ID)) {
@@ -792,6 +836,7 @@ app.post("/webhook", async (req, res) => {
           `⭐ <b>Sterne</b>\n` +
           `/sterne — Sterne vergeben (fragt Schritt für Schritt)\n` +
           `/abbrechen — laufenden Vorgang abbrechen\n` +
+          `/sternestand — Übersicht: wer hat wie viele Sterne\n` +
           `/sternesystem — Speicher aus einer Sicherung wiederherstellen\n\n` +
           `🔒 <b>Verwaltung</b>\n` +
           `/code — heutiger Zugangscode\n` +

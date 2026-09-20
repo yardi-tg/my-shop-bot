@@ -124,6 +124,14 @@
       transition: transform 0.15s, border-color 0.15s;
     }
     .product-tile:active { transform: scale(0.97); border-color: var(--accent); }
+    /* Beim Tippen auf +/- soll die ganze Kachel ruhig bleiben */
+    /* Während der Regler gedrückt wird, bleibt die Kachel ruhig */
+    .product-tile.no-press:active { transform: none; border-color: var(--border); }
+    /* Zusätzliche Absicherung ohne JS: Kachel bleibt ruhig, wenn der Regler
+       oder einer seiner Knöpfe gedrückt wird. */
+    .product-tile:has(.pt-step-wrap:active),
+    .product-tile:has(.pt-step-btn:active) { transform: none !important; border-color: var(--border) !important; }
+    .pt-step-wrap, .pt-step-btn { -webkit-tap-highlight-color: transparent; }
     .product-tile.sold-out {
       position: relative; cursor: default; overflow: hidden;
     }
@@ -198,8 +206,10 @@
     .pt-stars .rt { color: var(--muted); font-size: 12px; font-weight:600; }
     .pt-from { font-size: 13px; font-weight: 700; color: var(--accent); margin-top: 12px; margin-bottom: 10px; }
     /* Sterne innerhalb der Badge */
-    .pt-bstars { display:inline-flex; align-items:center; gap:3px; margin-left:4px; flex-shrink:0; }
-    .pt-bstars .rt { color: var(--muted); font-size: 9px; font-weight:700; }
+    .pt-bline { display:inline-flex; align-items:center; gap:5px; white-space:nowrap; }
+    .pt-brow { display:inline-flex; align-items:center; gap:5px; }
+    .pt-bstars { display:inline-flex; align-items:center; gap:4px; }
+    .pt-bstars .rt { color: var(--muted); font-size: 10px; font-weight:700; }
     .pt-bstars svg { display:block; }
     /* Mengen-Regler auf der Kachel (nur wenn etwas im Warenkorb ist) */
     .pt-step {
@@ -228,14 +238,14 @@
     }
     .pt-import {
       margin-top: 8px;
-      padding: 7px 8px;
-      width: 100%; justify-content: center; white-space: nowrap;
+      padding: 8px 10px;
+      width: 100%; justify-content: center;
       border-radius: 50px;
       border: 1px solid rgba(255,205,110,0.4);
       background: linear-gradient(145deg, rgba(255,205,110,0.10), rgba(0,0,0,0.22));
       box-shadow: 0 2px 12px rgba(255,205,110,0.14), inset 0 1px 0 rgba(255,255,255,0.06);
-      font-size: 10px; font-weight: 700; letter-spacing: 0.2px;
-      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 11px; font-weight: 700; letter-spacing: 0.3px;
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
     }
     .import-text {
       background-image: linear-gradient(90deg, #ffcf6b, #ffa726, #ffee58, #66bb6a, #26c6da, #42a5f5, #7e57c2, #ec407a, #ffcf6b);
@@ -264,14 +274,15 @@
     }
     .pt-farm {
       margin-top: 10px;
-      padding: 7px 8px;
-      width: 100%; justify-content: center; white-space: nowrap;
+      padding: 8px 10px;
+      width: 100%; justify-content: center;
       border-radius: 50px;
       border: 1px solid rgba(255,205,110,0.45);
       background: linear-gradient(145deg, rgba(255,205,110,0.12), rgba(0,0,0,0.25));
       box-shadow: 0 3px 14px rgba(255,205,110,0.18), inset 0 1px 0 rgba(255,255,255,0.08);
-      font-size: 12px; font-weight: 700; letter-spacing: 0.4px;
-      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 11px; font-weight: 700; letter-spacing: 0.3px;
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+      white-space: nowrap;
     }
     .pt-farm-text {
       background-image: linear-gradient(90deg, #ffcf6b, #ffa726, #ffee58, #66bb6a, #26c6da, #42a5f5, #7e57c2, #ec407a, #ffcf6b);
@@ -394,7 +405,10 @@
     .lo-btn:active { transform: scale(0.98); }
     .pp-sub { font-size: 13px; color: var(--muted); margin-bottom: 12px; }
     .pp-badges { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center; }
-    .pp-badges .pt-import, .pp-badges .pt-farm { margin-top: 0; }
+    /* Auf der Produktseite stehen die Badges nebeneinander — dort NICHT stapeln */
+    .pp-badges .pt-import, .pp-badges .pt-farm {
+      margin-top: 0; width: auto; flex-direction: row; padding: 7px 14px; gap: 6px;
+    }
     .pp-stars { display:inline-flex; align-items:center; gap:6px; }
     .pp-stars .rt { color: var(--muted); font-size: 13px; font-weight:600; }
     .pp-note { margin: 8px 16px 0; padding: 12px 14px; background: rgba(255,205,110,0.08); border:1px solid var(--border); border-radius:12px; font-size:13px; color:var(--accent); text-align:center; }
@@ -906,9 +920,9 @@
   // ═══ RENDER PRODUCT TILES ═══
   const listEl = document.getElementById("productList");
   listEl.innerHTML = PRODUCTS.map(p => {
-    const starsInBadge = `<span class="pt-bstars">${starRow(p.stars, 8)}<span class="rt">${p.stars.toFixed(1)}</span></span>`;
+    const starsInBadge = `<span class="pt-bstars">${starRow(p.stars, 11)}<span class="rt">${p.stars.toFixed(1)}</span></span>`;
     const badge = p.import
-      ? `<div class="pt-import">🇺🇸 <span class="import-text">USA Import</span>${starsInBadge}</div>` : "";
+      ? `<div class="pt-import"><span class="pt-bline">🇺🇸 <span class="import-text">USA Import</span></span>${starsInBadge}</div>` : "";
     // lowest real price for "ab CHF X"
     const prices = p.variants.filter(v => v.price > 0).map(v => v.price);
     const fromVal = p.fromPrice || (prices.length ? Math.min(...prices) : 0);
@@ -936,7 +950,7 @@
       emojiCell = `<div class="pt-emoji">${p.emoji}</div>`;
     }
     const farmBadge = p.farm
-      ? `<div class="pt-farm">💎 <span class="pt-farm-text">${p.farm}</span>${starsInBadge}</div>` : "";
+      ? `<div class="pt-farm"><span class="pt-bline">💎 <span class="pt-farm-text">${p.farm}</span></span>${starsInBadge}</div>` : "";
     return `<div class="product-tile" data-pid="${p.id}" onclick="openProduct(${p.id})">
       <div class="pt-arrow">›</div>
       ${emojiCell}
@@ -984,7 +998,7 @@
           <div class="pt-strain">${f.big}</div>
           <div class="pt-desc">Premium Qualität — bald wieder verfügbar.</div>
           <div class="pt-from">${f.from}</div>
-          <div class="pt-import">🇺🇸 <span class="import-text">USA Import</span><span class="pt-bstars">${starRow(4.5, 8)}<span class="rt">4.5</span></span></div>
+          <div class="pt-import"><span class="pt-bline">🇺🇸 <span class="import-text">USA Import</span></span><span class="pt-bstars">${starRow(4.5, 11)}<span class="rt">4.5</span></span></div>
         </div>
       </div>`;
     }).join("");
@@ -1298,6 +1312,23 @@
     refreshVariant(key); updateCartUI(); refreshCartDrawer(); refreshTileSteppers();
   }
 
+  // Unterdrückt den Druck-Effekt der Kachel, solange der Regler bedient wird.
+  // (CSS :active greift sonst auch auf die Eltern-Kachel durch.)
+  function tileNoPress(el) {
+    const tile = el.closest(".product-tile");
+    if (!tile) return;
+    tile.classList.add("no-press");
+    const off = () => {
+      tile.classList.remove("no-press");
+      document.removeEventListener("pointerup", off);
+      document.removeEventListener("pointercancel", off);
+      document.removeEventListener("touchend", off);
+    };
+    document.addEventListener("pointerup", off);
+    document.addEventListener("pointercancel", off);
+    document.addEventListener("touchend", off);
+  }
+
   // ── Mengen-Regler auf der Startseiten-Kachel ──────────────────
   // Zeigt die zuletzt gewählte Variante dieses Produkts. Liegt noch mehr von
   // dem Produkt im Korb, kommt darunter ein dezenter Hinweis.
@@ -1314,7 +1345,7 @@
       ? `<div class="pt-step-more">+ ${keys.length - 1} weitere Grösse${keys.length - 1 === 1 ? "" : "n"} im Warenkorb</div>`
       : "";
     // stopPropagation: sonst öffnet der Tipp auf +/- die Produktseite
-    return `<div class="pt-step-wrap" data-pid="${p.id}" onclick="event.stopPropagation()">
+    return `<div class="pt-step-wrap" data-pid="${p.id}" onclick="event.stopPropagation()" onpointerdown="event.stopPropagation();tileNoPress(this)" ontouchstart="tileNoPress(this)">
         <div class="pt-step">
           <span class="pt-step-label">${fv.variant.label}</span>
           <span class="pt-step-ctrl">

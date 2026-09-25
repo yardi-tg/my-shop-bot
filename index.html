@@ -554,6 +554,108 @@
     .fc-left { background: rgba(0,0,0,0.15); padding: 4px 12px; border-radius: 50px; font-size: 13px; }
     .fc-right { font-size: 16px; }
 
+
+    /* COMMUNITY */
+    .community-btn {
+      width: 38px; height: 38px; flex: 0 0 38px;
+      border-radius: 50%; border: 1px solid var(--border);
+      background: var(--surface2); color: var(--accent);
+      display: inline-flex; align-items: center; justify-content: center;
+      cursor: pointer; padding: 0; box-sizing: border-box;
+      transition: transform .18s ease, border-color .18s ease, background .18s ease;
+    }
+    .community-btn:active { transform: scale(.92); }
+    .community-btn svg { width: 19px; height: 19px; }
+    .header-actions { display:flex; align-items:center; gap:8px; }
+    .community-page {
+      position: fixed; inset: 0; z-index: 340;
+      background:
+        radial-gradient(1100px 700px at 85% -10%, rgba(220,160,40,0.30), transparent 60%),
+        radial-gradient(900px 650px at -15% 108%, rgba(78,50,8,0.48), transparent 62%),
+        var(--bg);
+      transform: translateX(100%);
+      transition: transform .3s cubic-bezier(.32,.72,0,1);
+      overflow-y: auto; padding-bottom: 30px;
+    }
+    .community-page.open { transform: translateX(0); }
+    .community-header {
+      position: sticky; top: 0; z-index: 5;
+      background: rgba(13,7,26,.90); backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 16px; display:grid;
+      grid-template-columns: 1fr auto 1fr; align-items:center; gap:10px;
+    }
+    .community-back {
+      justify-self:start; background:var(--surface2); border:1px solid var(--border);
+      color:var(--accent); border-radius:50px; padding:8px 14px;
+      font:600 13px 'DM Sans',sans-serif; cursor:pointer;
+    }
+    .community-title { text-align:center; font-size:15px; font-weight:700; white-space:nowrap; }
+    .community-head-spacer { width:120px; justify-self:end; display:flex; justify-content:flex-end; }
+    .community-wrap { max-width:760px; margin:0 auto; padding:18px 14px 40px; }
+    .community-intro {
+      background:linear-gradient(145deg,rgba(63,48,24,.92),rgba(43,33,16,.92));
+      border:1px solid var(--border); border-radius:18px; padding:18px;
+      box-shadow:0 10px 30px rgba(0,0,0,.14); margin-bottom:14px;
+    }
+    .community-intro-icon { font-size:28px; margin-bottom:8px; }
+    .community-intro h2 { margin:0 0 7px; font-size:18px; }
+    .community-intro p { margin:0; color:var(--muted); font-size:13px; line-height:1.55; }
+    .community-compose {
+      background:rgba(43,33,16,.86); border:1px solid var(--border); border-radius:18px;
+      padding:14px; margin-bottom:14px;
+    }
+    .community-compose textarea {
+      width:100%; min-height:100px; resize:vertical; box-sizing:border-box;
+      background:rgba(20,16,10,.78); border:1px solid var(--border); border-radius:12px;
+      color:var(--text); padding:12px; outline:none; font:14px/1.5 'DM Sans',sans-serif;
+    }
+    .community-compose textarea:focus { border-color:#ffcf6b; box-shadow:0 0 14px rgba(230,170,50,.16); }
+    .community-compose-row { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-top:10px; }
+    .community-anon { color:var(--muted); font-size:11px; }
+    .community-send {
+      background:linear-gradient(135deg,#ffcf6b,#c88a12); color:#1f1504; border:0;
+      border-radius:12px; padding:10px 16px; font:700 13px 'DM Sans',sans-serif; cursor:pointer;
+    }
+    .community-send:disabled { opacity:.55; cursor:not-allowed; }
+    .community-list { display:flex; flex-direction:column; gap:10px; }
+    .community-empty { text-align:center; color:var(--muted); padding:34px 16px; font-size:13px; }
+    .community-post {
+      background:rgba(43,33,16,.86); border:1px solid var(--border); border-radius:16px; padding:14px;
+    }
+    .community-post-top { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px; }
+    .community-author { font-size:12px; font-weight:700; color:var(--accent); }
+    .community-time { font-size:10px; color:var(--muted); }
+    .community-message { white-space:pre-wrap; word-break:break-word; font-size:14px; line-height:1.55; }
+    .community-actions { display:flex; gap:8px; margin-top:11px; }
+    .community-reply-btn, .community-delete-btn {
+      border:1px solid var(--border); background:transparent; color:var(--muted);
+      border-radius:10px; padding:7px 10px; font:600 11px 'DM Sans',sans-serif; cursor:pointer;
+    }
+    .community-delete-btn { color:#e07070; border-color:rgba(224,112,112,.28); }
+    .community-replies { margin-top:12px; padding-left:12px; border-left:2px solid rgba(255,207,107,.18); display:flex; flex-direction:column; gap:8px; }
+    .community-reply { background:rgba(20,16,10,.52); border-radius:12px; padding:10px; }
+    .community-reply .community-message { font-size:13px; }
+    .community-reply-box { display:none; margin-top:10px; }
+    .community-reply-box.open { display:block; }
+    .community-reply-box textarea { min-height:72px; }
+    .community-small-row { display:flex; justify-content:flex-end; gap:7px; margin-top:7px; }
+    .community-mode { display:none; align-items:center; gap:8px; margin-bottom:10px; }
+    .community-mode.show { display:flex; }
+    .community-mode-label { color:var(--muted); font-size:11px; }
+    .community-mode select {
+      background:rgba(20,16,10,.78); color:var(--text); border:1px solid var(--border);
+      border-radius:10px; padding:7px 9px; outline:none; font:600 12px 'DM Sans',sans-serif;
+    }
+    .community-refresh { color:var(--muted); font-size:11px; }
+    @media (max-width:420px) {
+      .header { padding-left:14px; padding-right:14px; }
+      .header-title { font-size:20px; }
+      .cart-btn { padding-left:11px; padding-right:11px; }
+      .community-wrap { padding-left:10px; padding-right:10px; }
+      .community-head-spacer { width:110px; }
+    }
+
     /* LOCK SCREEN */
     @keyframes shake { 0%,100%{transform:translateX(0);} 20%{transform:translateX(-8px);} 40%{transform:translateX(8px);} 60%{transform:translateX(-6px);} 80%{transform:translateX(6px);} }
     .shake-error { animation: shake 0.4s ease !important; }
@@ -576,7 +678,7 @@
     <div id="lockIcon" style="font-size:56px;margin-bottom:20px;transition:all 0.3s;">🔒</div>
     <div style="font-family:'Playfair Display',serif;font-size:28px;background:linear-gradient(95deg,#fff8e8,#ffcf6b 45%,#c88a12);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;filter:drop-shadow(0 0 16px rgba(230,170,50,0.55));margin-bottom:8px;letter-spacing:0.5px;">Blocktheke</div>
     <div style="color:#b8a98a;font-size:13px;margin-bottom:32px;letter-spacing:1px;">ZUGANGSCODE EINGEBEN</div>
-    <input id="codeInput" type="text" inputmode="numeric" maxlength="4" placeholder="••••" style="background:rgba(43,33,16,0.85);border:2px solid rgba(255,205,110,0.32);color:#ffcf6b;border-radius:14px;padding:16px 20px;font-size:28px;text-align:center;letter-spacing:12px;width:170px;outline:none;margin-bottom:20px;font-family:'DM Sans',sans-serif;" />
+    <input id="codeInput" type="tel" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" placeholder="••••" style="background:rgba(43,33,16,0.85);border:2px solid rgba(255,205,110,0.32);color:#ffcf6b;border-radius:14px;padding:16px 20px;font-size:28px;text-align:center;letter-spacing:12px;width:170px;outline:none;margin-bottom:20px;font-family:'DM Sans',sans-serif;" />
     <button id="unlockBtn" style="background:linear-gradient(135deg,#ffcf6b,#c88a12);color:#1f1504;border:none;border-radius:14px;box-shadow:0 6px 22px rgba(200,140,35,0.48);padding:15px 40px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;cursor:pointer;letter-spacing:1px;">🔓 ENTSPERREN</button>
     <div id="lockError" style="color:#e07070;font-size:13px;margin-top:16px;display:none;"></div>
   </div>
@@ -585,7 +687,17 @@
   <!-- HEADER -->
   <div class="header">
     <div class="header-title">✦ Blocktheke</div>
-    <button class="cart-btn" onclick="openCart()">🛒 Warenkorb <span class="cart-badge" id="cartBadge">0</span></button>
+    <div class="header-actions">
+      <button class="community-btn" onclick="openCommunity()" aria-label="Community öffnen" title="Community">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="9" cy="8" r="3.2"></circle>
+          <path d="M3.8 18.2c.6-3 2.4-4.7 5.2-4.7s4.6 1.7 5.2 4.7"></path>
+          <path d="M15.5 5.7a3 3 0 0 1 0 5.9"></path>
+          <path d="M17.2 13.8c1.8.6 3 2 3.5 4.4"></path>
+        </svg>
+      </button>
+      <button class="cart-btn" onclick="openCart()">🛒 Warenkorb <span class="cart-badge" id="cartBadge">0</span></button>
+    </div>
   </div>
 
   <!-- LAST ORDER banner (Nochmal bestellen) -->
@@ -593,6 +705,39 @@
 
   <!-- PRODUCTS (grid of tiles) -->
   <div class="products" id="productList"></div>
+
+  <!-- COMMUNITY PAGE -->
+  <div class="community-page" id="communityPage" aria-hidden="true">
+    <div class="community-header">
+      <button class="community-back" onclick="closeCommunity()">Zurück</button>
+      <div class="community-title">Community</div>
+      <div class="community-head-spacer" aria-hidden="true"><span class="community-refresh" id="communityStatus"></span></div>
+    </div>
+    <div class="community-wrap">
+      <div class="community-intro">
+        <div class="community-intro-icon">💬</div>
+        <h2>Du hast was zu melden?</h2>
+        <p>Verbesserungsvorschläge, Kritik oder Ideen? Du kannst es hier anonym abgeben. Dein Name wird bei deinen Beiträgen nicht angezeigt.</p>
+      </div>
+
+      <div class="community-compose">
+        <div class="community-mode" id="communityModeBox">
+          <span class="community-mode-label">Senden als:</span>
+          <select id="communityMode">
+            <option value="milord">Milord</option>
+            <option value="anonymous">Anonym</option>
+          </select>
+        </div>
+        <textarea id="communityMessage" maxlength="2000" placeholder="Schreib hier anonym deine Nachricht..."></textarea>
+        <div class="community-compose-row">
+          <span class="community-anon" id="communityAnonHint">🕶️ Anonym · max. 2.000 Zeichen</span>
+          <button class="community-send" id="communitySendBtn" onclick="submitCommunityPost()">Posten</button>
+        </div>
+      </div>
+
+      <div class="community-list" id="communityList"></div>
+    </div>
+  </div>
 
   <!-- FULL PRODUCT PAGE (overlay) -->
   <div class="product-page" id="productPage">
@@ -772,15 +917,15 @@
     const mult = variant.pieces ? variant.pieces : 1;
     return variant.price * mult * qty;
   }
-  const BOT_BACKEND_URL = "https://my-shop-bot-syvo.onrender.com/order";
+  const BOT_BACKEND_URL = "https://my-shop-bot-syvo.onrender.com";
   const OWNER_USERNAME = "mi1lord9";
 
   const tg = window.Telegram?.WebApp;
   if (tg) { tg.ready(); tg.expand(); }
 
   // Server wach halten
-  fetch(BOT_BACKEND_URL.replace("/order", "/"), { method: "GET" }).catch(() => {});
-  setInterval(() => { fetch(BOT_BACKEND_URL.replace("/order", "/"), { method: "GET" }).catch(() => {}); }, 10 * 60 * 1000);
+  fetch(BOT_BACKEND_URL + "/", { method: "GET" }).catch(() => {});
+  setInterval(() => { fetch(BOT_BACKEND_URL + "/", { method: "GET" }).catch(() => {}); }, 10 * 60 * 1000);
 
   // cart = { variantKey: count }
   let cart = {};
@@ -874,7 +1019,7 @@
     const btn = document.getElementById("unlockBtn");
     const lockIcon = document.getElementById("lockIcon");
     const input = document.getElementById("codeInput");
-    if (code.length !== 4) {
+    if (!/^\d{4}$/.test(code)) {
       errorEl.textContent = "Bitte gib den 4-stelligen Code ein.";
       errorEl.style.display = "block";
       input.classList.remove("shake-error"); void input.offsetWidth; input.classList.add("shake-error");
@@ -882,7 +1027,7 @@
     }
     btn.textContent = "Wird geprüft..."; btn.disabled = true;
     try {
-      const res = await fetch(BOT_BACKEND_URL.replace("/order","/check-code"), {
+      const res = await fetch(BOT_BACKEND_URL + "/check-code", {
         method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({code})
       });
       const data = await res.json();
@@ -973,11 +1118,8 @@
 
   // Nudge every tile preview video to fetch its poster frame right away,
   // so Cali/hash thumbnails appear as fast as the vape photos do.
-  requestAnimationFrame(() => {
-    document.querySelectorAll("video.pt-vid").forEach(v => {
-      try { v.preload = "metadata"; v.load(); } catch (e) {}
-    });
-  });
+  // Product tile videos already use preload="metadata" in their markup.
+  // Avoid forcing load() on every video at once, especially on mobile.
 
   (function splitIntoColumns() {
     const tiles = [...listEl.children].filter(el => el.classList.contains("product-tile"));
@@ -1098,10 +1240,28 @@
   }
   function closeProduct() {
     refreshTileSteppers();   // Auswahl auf der Kachel sichtbar machen
-    document.getElementById("productPage").classList.remove("open");
+
+    // Immediately clean up all video listeners/timers from the product page.
+    // This prevents delayed autoplay callbacks from surviving after the page closes.
+    if (activeVideoCleanup) {
+      activeVideoCleanup();
+      activeVideoCleanup = null;
+    }
+
+    if (galScrollTimer) {
+      clearTimeout(galScrollTimer);
+      galScrollTimer = null;
+    }
+
+    videoKickTimers.forEach(clearTimeout);
+    videoKickTimers = [];
+
+    document.querySelectorAll(".pp-gvid").forEach(v => v.pause());
+
     const gal = document.querySelector(".pp-gallery");
     if (gal) gal.onscroll = null;
-    document.querySelectorAll(".pp-gvid").forEach(v => v.pause());
+
+    document.getElementById("productPage").classList.remove("open");
   }
   // Swipe horizontally to go back (works anywhere except on the horizontal media gallery)
   (function setupSwipeBack(){
@@ -1135,7 +1295,8 @@
       }
     }, { passive: true });
   })();
-  let videoObserver = null;
+  let activeVideoCleanup = null;
+  let videoKickTimers = [];
   // Pause any video that isn't the mostly-visible one. Cheap, no reflow — safe to
   // call on every scroll tick so the old video stops the instant you swipe away.
   function pauseOffscreen() {
@@ -1187,37 +1348,57 @@
   function setupVideoObserver() {
     const vids = document.querySelectorAll(".pp-gvid");
     if (!vids.length) return;
-    if (videoObserver) videoObserver.disconnect();
-    // Don't call load() (causes black re-flash). Just play the first one ASAP.
-    const gal = document.querySelector(".pp-gallery");
-    if (gal) {
-      gal.onscroll = onGalleryScroll;  // debounced — fires after the swipe stops
+
+    // A product can be opened repeatedly. Clean up listeners/timers from the
+    // previous product first so play() is never triggered by stale handlers.
+    if (activeVideoCleanup) {
+      activeVideoCleanup();
+      activeVideoCleanup = null;
     }
-    // Play the first video immediately so it shows frames instead of black.
+    videoKickTimers.forEach(clearTimeout);
+    videoKickTimers = [];
+
+    const gal = document.querySelector(".pp-gallery");
+    if (gal) gal.onscroll = onGalleryScroll;
+
     const first = vids[0];
+    const listeners = [];
+    let cleaned = false;
     if (first) {
       let kicks = 0;
       const kick = () => {
-        // only if the user hasn't scrolled the gallery away from video 1
+        // Nach dem Schliessen der Produktseite nichts mehr anfassen.
+        if (cleaned || !document.body.contains(first)) return;
         if (gal && gal.scrollLeft > 40) { playOnlyVisible(); return; }
-        const pr = first.play();
+        let pr;
+        try { pr = first.play(); } catch (e) { return; }
         if (pr && pr.catch) pr.catch(() => {
-          // autoplay refused or not ready — retry a few times
-          if (kicks++ < 8) setTimeout(kick, 250);
+          if (!cleaned && kicks++ < 8) {
+            const t = setTimeout(kick, 250);
+            videoKickTimers.push(t);
+          }
         });
       };
       kick();
-      // fire on every readiness milestone (not once) so a slow load still starts
-      first.addEventListener("canplay", kick);
-      first.addEventListener("loadeddata", kick);
-      first.addEventListener("canplaythrough", kick);
-      // final safety nets for slow PC connections
-      setTimeout(kick, 400);
-      setTimeout(kick, 1000);
-      setTimeout(kick, 2000);
+      ["canplay", "loadeddata", "canplaythrough"].forEach(eventName => {
+        first.addEventListener(eventName, kick);
+        listeners.push([eventName, kick]);
+      });
+      [400, 1000, 2000].forEach(delay => {
+        const t = setTimeout(kick, delay);
+        videoKickTimers.push(t);
+      });
     }
-    // ensure only the visible one keeps playing
-    setTimeout(playOnlyVisible, 200);
+    const visibleTimer = setTimeout(playOnlyVisible, 200);
+    videoKickTimers.push(visibleTimer);
+
+    activeVideoCleanup = () => {
+      cleaned = true;
+      if (first) listeners.forEach(([eventName, fn]) => first.removeEventListener(eventName, fn));
+      videoKickTimers.forEach(clearTimeout);
+      videoKickTimers = [];
+      if (gal) gal.onscroll = null;
+    };
   }
 
   // If a CDN (jsDelivr) media URL fails, fall back to raw.githubusercontent once.
@@ -1275,7 +1456,14 @@
       const ratio = v.offsetWidth ? visW / v.offsetWidth : 0;
       if (ratio < 0.6) return; // not the centered one — ignore the tap
     }
-    if (v.paused) v.play(); else v.pause();
+    if (v.paused) {
+      try {
+        const p = v.play();
+        if (p && p.catch) p.catch(() => {});
+      } catch (e) {}
+    } else {
+      v.pause();
+    }
   }
   function toggleMenge() {
     const v = document.getElementById("ppVariants");
@@ -1360,7 +1548,7 @@
       ? `<div class="pt-step-more">+ ${keys.length - 1} weitere Grösse${keys.length - 1 === 1 ? "" : "n"} im Warenkorb</div>`
       : "";
     // stopPropagation: sonst öffnet der Tipp auf +/- die Produktseite
-    return `<div class="pt-step-wrap" data-pid="${p.id}" onclick="event.stopPropagation()" onpointerdown="event.stopPropagation();tileNoPress(this)" ontouchstart="tileNoPress(this)">
+    return `<div class="pt-step-wrap" data-pid="${p.id}" onclick="event.stopPropagation()" onpointerdown="event.stopPropagation();tileNoPress(this)" ontouchstart="event.stopPropagation();tileNoPress(this)">
         <div class="pt-step">
           <span class="pt-step-label">${fv.variant.label}</span>
           <span class="pt-step-ctrl">
@@ -1393,10 +1581,14 @@
       clearArmed = true;
       btn.textContent = "Wirklich leeren?";
       btn.classList.add("confirm");
-      clearTimer = setTimeout(resetClearBtn, 3000);
+      clearTimer = setTimeout(() => {
+        clearTimer = null;
+        resetClearBtn();
+      }, 3000);
       return;
     }
     clearTimeout(clearTimer);
+    clearTimer = null;
     resetClearBtn();
     // clear every entry, refresh the product page steppers too
     Object.keys(cart).forEach(key => { delete cart[key]; refreshVariant(key); });
@@ -1475,7 +1667,9 @@
     }
     if (clearBtn) clearBtn.style.display = "block";
     container.innerHTML = keys.map(key => {
-      const { product, variant } = findVariant(key);
+      const found = findVariant(key);
+      if (!found) return "";
+      const { product, variant } = found;
       const qty = cart[key];
       const isReq = variant.price === 0;
       const lineTotal = lineTotalOf(variant, qty);
@@ -1500,6 +1694,259 @@
     document.getElementById("reqNote").style.display = hasReq ? "block" : "none";
     footer.style.display = "block";
   }
+
+  // ═══ COMMUNITY ═══
+  // Shared community: browser talks only to the Render backend.
+  // Telegram identity is sent as initData and validated server-side.
+  const COMMUNITY_API_BASE = BOT_BACKEND_URL;
+  let communityReplyTarget = null;
+  let communityPollTimer = null;
+  let communityIsModerator = false;
+
+  // Telegram-WebView blockiert oft native alert()/confirm().
+  function communityAlert(msg) {
+    try {
+      if (tg && typeof tg.showAlert === "function") { tg.showAlert(String(msg)); return; }
+    } catch (e) {}
+    alert(msg);
+  }
+  function communityConfirm(msg) {
+    return new Promise(resolve => {
+      try {
+        if (tg && typeof tg.showConfirm === "function") {
+          tg.showConfirm(String(msg), ok => resolve(!!ok));
+          return;
+        }
+      } catch (e) {}
+      resolve(confirm(msg));
+    });
+  }
+
+  function communityFace(label) {
+    return String(label || "").trim() === "Milord" ? "🛡️" : "🕶️";
+  }
+
+  function communityEscape(value) {
+    return String(value ?? "").replace(/[&<>'"]/g, ch => ({
+      "&":"&amp;", "<":"&lt;", ">":"&gt;", "'":"&#39;", '"':"&quot;"
+    }[ch]));
+  }
+
+  function communityHeaders(extra) {
+    return {
+      "Content-Type": "application/json",
+      "X-Telegram-Init-Data": tg?.initData || "",
+      ...(extra || {})
+    };
+  }
+
+  async function communityFetch(path, options = {}) {
+    const res = await fetch(`${COMMUNITY_API_BASE}${path}`, {
+      ...options,
+      headers: communityHeaders(options.headers)
+    });
+    let data = null;
+    try { data = await res.json(); } catch (_) {}
+    if (!res.ok) throw new Error(data?.error || `Community-Fehler (${res.status})`);
+    return data;
+  }
+
+  function communityTime(ts) {
+    try {
+      return new Intl.DateTimeFormat("de-CH", { day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit" }).format(new Date(ts));
+    } catch (e) { return ""; }
+  }
+
+  function renderCommunity(data) {
+    const list = document.getElementById("communityList");
+    if (!list) return;
+    communityIsModerator = !!data?.isModerator;
+
+    const modeBox = document.getElementById("communityModeBox");
+    const hint = document.getElementById("communityAnonHint");
+    if (modeBox) modeBox.classList.toggle("show", communityIsModerator);
+    if (hint) hint.textContent = communityIsModerator ? "🛡️ Moderator · max. 2.000 Zeichen" : "🕶️ Anonym · max. 2.000 Zeichen";
+
+    const posts = Array.isArray(data?.posts) ? data.posts : [];
+    if (!posts.length) {
+      list.innerHTML = `<div class="community-empty">Noch keine Nachrichten.<br>Sei die erste Person, die anonym etwas teilt.</div>`;
+      return;
+    }
+
+    list.innerHTML = posts.map(post => {
+      const replies = Array.isArray(post.replies) ? post.replies : [];
+      const repliesHtml = replies.length ? `
+        <div class="community-replies">
+          ${replies.map(reply => `
+            <div class="community-reply">
+              <div class="community-post-top">
+                <span class="community-author">${communityFace(reply.author_label)} ${communityEscape(reply.author_label)}</span>
+                <span class="community-time">${communityTime(reply.created_at)}</span>
+              </div>
+              <div class="community-message">${communityEscape(reply.body)}</div>
+              ${communityIsModerator ? `<div class="community-actions"><button class="community-delete-btn" onclick="deleteCommunityReply('${communityEscape(reply.id)}')">🗑 Löschen</button></div>` : ""}
+            </div>`).join("")}
+        </div>` : "";
+
+      return `
+        <article class="community-post" data-post-id="${communityEscape(post.id)}">
+          <div class="community-post-top">
+            <span class="community-author">${communityFace(post.author_label)} ${communityEscape(post.author_label)}</span>
+            <span class="community-time">${communityTime(post.created_at)}</span>
+          </div>
+          <div class="community-message">${communityEscape(post.body)}</div>
+          <div class="community-actions">
+            <button class="community-reply-btn" onclick="toggleCommunityReply('${communityEscape(post.id)}')">↩ Antworten${replies.length ? ` · ${replies.length}` : ""}</button>
+            ${communityIsModerator ? `<button class="community-delete-btn" onclick="deleteCommunityPost('${communityEscape(post.id)}')">🗑 Löschen</button>` : ""}
+          </div>
+          <div class="community-reply-box" id="reply-box-${communityEscape(post.id)}">
+            <textarea maxlength="1000" placeholder="Anonym antworten..."></textarea>
+            <div class="community-small-row">
+              <button class="community-reply-btn" onclick="toggleCommunityReply('${communityEscape(post.id)}')">Abbrechen</button>
+              <button class="community-send" onclick="submitCommunityReply('${communityEscape(post.id)}', this)">Antworten</button>
+            </div>
+          </div>
+          ${repliesHtml}
+        </article>`;
+    }).join("");
+  }
+
+  async function loadCommunity(showError = true) {
+    const status = document.getElementById("communityStatus");
+    try {
+      if (status) status.textContent = "Laden…";
+      const data = await communityFetch("/community");
+      renderCommunity(data);
+      if (status) status.textContent = "";
+      return data;
+    } catch (e) {
+      if (status) status.textContent = "";
+      if (showError) {
+        const list = document.getElementById("communityList");
+        if (list) list.innerHTML = `<div class="community-empty">${communityEscape(e.message || "Community nicht verfügbar")}</div>`;
+      }
+      return null;
+    }
+  }
+
+  function startCommunityPolling() {
+    stopCommunityPolling();
+    communityPollTimer = setInterval(() => {
+      const page = document.getElementById("communityPage");
+      if (page?.classList.contains("open")) loadCommunity(false);
+    }, 8000);
+  }
+
+  function stopCommunityPolling() {
+    if (communityPollTimer) {
+      clearInterval(communityPollTimer);
+      communityPollTimer = null;
+    }
+  }
+
+  async function openCommunity() {
+    const page = document.getElementById("communityPage");
+    if (!page) return;
+    page.classList.add("open");
+    page.setAttribute("aria-hidden", "false");
+    document.body.style.overflow = "hidden";
+    startCommunityPolling();
+    await loadCommunity(true);
+  }
+
+  function closeCommunity() {
+    const page = document.getElementById("communityPage");
+    if (!page) return;
+    page.classList.remove("open");
+    page.setAttribute("aria-hidden", "true");
+    document.body.style.overflow = "";
+    communityReplyTarget = null;
+    stopCommunityPolling();
+  }
+
+  function toggleCommunityReply(postId) {
+    const box = document.getElementById(`reply-box-${postId}`);
+    if (!box) return;
+    box.classList.toggle("open");
+    if (box.classList.contains("open")) {
+      const textarea = box.querySelector("textarea");
+      if (textarea) setTimeout(() => textarea.focus(), 30);
+      communityReplyTarget = postId;
+    } else if (communityReplyTarget === postId) {
+      communityReplyTarget = null;
+    }
+  }
+
+  async function submitCommunityPost() {
+    const input = document.getElementById("communityMessage");
+    const btn = document.getElementById("communitySendBtn");
+    if (!input) return;
+    if (!tg?.initData) { communityAlert("Bitte öffne den Shop direkt in Telegram, um schreiben zu können."); return; }
+    const body = input.value.trim();
+    if (!body || body.length > 2000 || btn?.disabled) return;
+    if (btn) btn.disabled = true;
+    try {
+      const mode = communityIsModerator ? (document.getElementById("communityMode")?.value || "milord") : "stable";
+      await communityFetch("/community/posts", {
+        method: "POST",
+        body: JSON.stringify({ body, authorMode: mode })
+      });
+      input.value = "";
+      await loadCommunity(true);
+    } catch (e) {
+      communityAlert(e.message || "Beitrag konnte nicht gesendet werden.");
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  async function submitCommunityReply(postId, button) {
+    const box = document.getElementById(`reply-box-${postId}`);
+    if (!box) return;
+    if (!tg?.initData) { communityAlert("Bitte öffne den Shop direkt in Telegram, um schreiben zu können."); return; }
+    const input = box.querySelector("textarea");
+    if (!input) return;
+    const body = input.value.trim();
+    if (!body || body.length > 1000 || button?.disabled) return;
+    if (button) button.disabled = true;
+    try {
+      const mode = communityIsModerator ? (document.getElementById("communityMode")?.value || "milord") : "stable";
+      await communityFetch("/community/replies", {
+        method: "POST",
+        body: JSON.stringify({ postId, body, authorMode: mode })
+      });
+      await loadCommunity(true);
+    } catch (e) {
+      communityAlert(e.message || "Antwort konnte nicht gesendet werden.");
+    } finally {
+      if (button) button.disabled = false;
+    }
+  }
+
+  async function deleteCommunityPost(postId) {
+    if (!communityIsModerator) return;
+    if (!(await communityConfirm("Diesen Beitrag wirklich löschen?"))) return;
+    try {
+      await communityFetch(`/community/posts/${encodeURIComponent(postId)}`, { method: "DELETE" });
+      await loadCommunity(true);
+    } catch (e) { communityAlert(e.message || "Löschen fehlgeschlagen."); }
+  }
+
+  async function deleteCommunityReply(replyId) {
+    if (!communityIsModerator) return;
+    if (!(await communityConfirm("Diese Antwort wirklich löschen?"))) return;
+    try {
+      await communityFetch(`/community/replies/${encodeURIComponent(replyId)}`, { method: "DELETE" });
+      await loadCommunity(true);
+    } catch (e) { communityAlert(e.message || "Löschen fehlgeschlagen."); }
+  }
+
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape") {
+      const community = document.getElementById("communityPage");
+      if (community?.classList.contains("open")) closeCommunity();
+    }
+  });
 
   // ═══ SUBMIT ORDER ═══
   // Zeigt oben im Shop die letzte Bestellung mit "Nochmal bestellen"-Button.
@@ -1571,12 +2018,21 @@
   }
 
   function submitOrder() {
-    const keys = Object.keys(cart).filter(k => cart[k] > 0);
+    const keys = Object.keys(cart).filter(k => cart[k] > 0 && findVariant(k));
     if (keys.length === 0) return;
+
+    const orderBtn = document.getElementById("orderBtn");
+    if (orderBtn?.disabled) return;
+    if (orderBtn) {
+      orderBtn.disabled = true;
+      orderBtn.textContent = "Wird geöffnet...";
+    }
 
     let lines = [], total = 0, reqItems = [];
     keys.forEach(key => {
-      const { product, variant } = findVariant(key);
+      const found = findVariant(key);
+      if (!found) return;
+      const { product, variant } = found;
       const qty = cart[key];
       if (variant.price === 0) {
         lines.push(`- ${qty}x ${product.name} · ${variant.label} — (Preis Anfrage)`);
@@ -1610,8 +2066,21 @@
       }
     } catch (e) { /* Speicher evtl. blockiert — ignorieren */ }
 
-    if (tg) { tg.openTelegramLink(deepLink); setTimeout(()=>tg.close(),500); }
-    else { window.open(deepLink, "_blank"); }
+    try {
+      if (tg) {
+        tg.openTelegramLink(deepLink);
+        setTimeout(() => tg.close(), 500);
+      } else {
+        const win = window.open(deepLink, "_blank");
+        if (!win) throw new Error("Popup blocked");
+      }
+    } catch (e) {
+      if (orderBtn) {
+        orderBtn.disabled = false;
+        orderBtn.textContent = "Jetzt bestellen";
+      }
+      console.error("Bestellung konnte nicht geöffnet werden:", e);
+    }
   }
 </script>
 </body>

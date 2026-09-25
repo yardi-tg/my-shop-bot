@@ -947,6 +947,7 @@
   document.getElementById("codeInput").addEventListener("keypress", (e) => { if (e.key === "Enter") checkAccessCode(); });
 
   function startMatrixSequence() {
+    prefetchCommunity();   // Community im Hintergrund holen, solange die Animation läuft
     const canvas = document.getElementById("matrixCanvas");
     const ctx = canvas.getContext("2d");
     canvas.width = window.innerWidth; canvas.height = window.innerHeight;
@@ -1702,6 +1703,18 @@
   let communityReplyTarget = null;
   let communityPollTimer = null;
   let communityIsModerator = false;
+  let communityCache = null;      // zuletzt erfolgreich geladene Beiträge
+  let communityPrefetch = null;   // läuft im Hintergrund, direkt nach dem Entsperren
+
+  // Holt die Community schon während der Matrix-Animation, damit sie beim
+  // Öffnen sofort dasteht — und weckt dabei gleichzeitig den Render-Server.
+  function prefetchCommunity() {
+    if (!tg || !tg.initData) return null;
+    communityPrefetch = communityFetch("/community")
+      .then(data => { communityCache = data; return data; })
+      .catch(() => null);
+    return communityPrefetch;
+  }
 
   // Telegram-WebView blockiert oft native alert()/confirm().
   function communityAlert(msg) {
@@ -1811,35 +1824,57 @@
     }).join("");
   }
 
-  async function loadCommunity(showError = true) {
+  // silent = keine Statusanzeige und keine Fehlermeldung (Hintergrund-Aktualisierung)
+  // tries  = wie oft es erneut versucht wird, bevor überhaupt ein Fehler erscheint
+  async function loadCommunity({ silent = false, tries = 1 } = {}) {
     const status = document.getElementById("communityStatus");
-    try {
-      if (status) status.textContent = "Laden…";
-      const data = await communityFetch("/community");
-      renderCommunity(data);
-      if (status) status.textContent = "";
-      return data;
-    } catch (e) {
-      if (status) status.textContent = "";
-      if (showError) {
-        const list = document.getElementById("communityList");
-        if (list) list.innerHTML = `<div class="community-empty">${communityEscape(e.message || "Community nicht verfügbar")}</div>`;
+    for (let versuch = 0; versuch < tries; versuch++) {
+      try {
+        if (!silent && status) status.textContent = versuch === 0 ? "Laden…" : "Noch kurz…";
+        const data = await communityFetch("/community");
+        communityCache = data;
+        renderCommunity(data);
+        if (status) status.textContent = "";
+        return data;
+      } catch (e) {
+        if (versuch < tries - 1) {
+          await new Promise(r => setTimeout(r, 1000 * (versuch + 1)));
+          continue;
+        }
+        if (status) status.textContent = "";
+        // Bereits sichtbare Beiträge NIE durch eine Fehlermeldung ersetzen.
+        if (!silent && !communityCache) {
+          const list = document.getElementById("communityList");
+          if (list) list.innerHTML = `<div class="community-empty">Verbindung wird aufgebaut…<br>Einen Moment, es wird weiter versucht.</div>`;
+        }
+        return null;
       }
-      return null;
     }
+    return null;
   }
 
   function startCommunityPolling() {
     stopCommunityPolling();
-    communityPollTimer = setInterval(() => {
+    // Solange noch nie etwas geladen wurde (Server wacht auf): alle 3 Sekunden.
+    // Sobald Beiträge da sind: der ruhige 8-Sekunden-Takt.
+    const naechsterTakt = () => (communityCache ? 8000 : 3000);
+    const takt = async () => {
       const page = document.getElementById("communityPage");
-      if (page?.classList.contains("open")) loadCommunity(false);
-    }, 8000);
+      if (!page || !page.classList.contains("open")) { communityPollTimer = null; return; }
+      await loadCommunity({ silent: true });
+      const seite = document.getElementById("communityPage");
+      if (seite && seite.classList.contains("open")) {
+        communityPollTimer = setTimeout(takt, naechsterTakt());
+      } else {
+        communityPollTimer = null;
+      }
+    };
+    communityPollTimer = setTimeout(takt, naechsterTakt());
   }
 
   function stopCommunityPolling() {
     if (communityPollTimer) {
-      clearInterval(communityPollTimer);
+      clearTimeout(communityPollTimer);
       communityPollTimer = null;
     }
   }
@@ -1850,8 +1885,24 @@
     page.classList.add("open");
     page.setAttribute("aria-hidden", "false");
     document.body.style.overflow = "hidden";
+    // Sofort zeigen, was schon geladen wurde — kein Warten, kein Ladebildschirm.
+    if (communityCache) {
+      renderCommunity(communityCache);
+    } else {
+      const list = document.getElementById("communityList");
+      if (list && !list.innerHTML.trim()) {
+        list.innerHTML = `<div class="community-empty">Wird geladen…</div>`;
+      }
+      // Falls die Vorabladung noch unterwegs ist: kurz darauf warten
+      if (communityPrefetch) {
+        const vorab = await communityPrefetch;
+        if (vorab) renderCommunity(vorab);
+      }
+    }
+
     startCommunityPolling();
-    await loadCommunity(true);
+    // Im Hintergrund frisch nachladen. Bis zu 3 Versuche, falls der Server noch aufwacht.
+    loadCommunity({ silent: !!communityCache, tries: 3 });
   }
 
   function closeCommunity() {
@@ -1892,7 +1943,7 @@
         body: JSON.stringify({ body, authorMode: mode })
       });
       input.value = "";
-      await loadCommunity(true);
+      await loadCommunity({ silent: true });
     } catch (e) {
       communityAlert(e.message || "Beitrag konnte nicht gesendet werden.");
     } finally {
@@ -1915,7 +1966,7 @@
         method: "POST",
         body: JSON.stringify({ postId, body, authorMode: mode })
       });
-      await loadCommunity(true);
+      await loadCommunity({ silent: true });
     } catch (e) {
       communityAlert(e.message || "Antwort konnte nicht gesendet werden.");
     } finally {
@@ -1928,7 +1979,7 @@
     if (!(await communityConfirm("Diesen Beitrag wirklich löschen?"))) return;
     try {
       await communityFetch(`/community/posts/${encodeURIComponent(postId)}`, { method: "DELETE" });
-      await loadCommunity(true);
+      await loadCommunity({ silent: true });
     } catch (e) { communityAlert(e.message || "Löschen fehlgeschlagen."); }
   }
 
@@ -1937,7 +1988,7 @@
     if (!(await communityConfirm("Diese Antwort wirklich löschen?"))) return;
     try {
       await communityFetch(`/community/replies/${encodeURIComponent(replyId)}`, { method: "DELETE" });
-      await loadCommunity(true);
+      await loadCommunity({ silent: true });
     } catch (e) { communityAlert(e.message || "Löschen fehlgeschlagen."); }
   }
 

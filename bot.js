@@ -66,7 +66,7 @@ function usersToText() {
   if (withStars.length === 0) {
     view += `\nNoch keine Sterne vergeben.\n`;
   } else {
-    const line = u => `${dot(u)} ${u.handle} — ${u.stars || 0}/${STARS_GOAL}`;
+    const line = u => `${u.handle} — ${u.stars || 0}/${STARS_GOAL} ${dot(u)}`;
     if (full.length)  view += `\n🎉 VOLL (${full.length})\n` + full.map(line).join("\n") + "\n";
     if (close.length) view += `\nKURZ DAVOR\n` + close.map(line).join("\n") + "\n";
     if (going.length) view += `\nUNTERWEGS\n` + going.map(line).join("\n") + "\n";

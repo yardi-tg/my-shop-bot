@@ -240,7 +240,7 @@ async function kannIchSchreiben(userId) {
   }
 }
 
-// Geht die ganze Liste durch und setzt die Punkte neu. Läuft NUR auf /prüfen,
+// Geht die ganze Liste durch und setzt die Punkte neu. Läuft NUR auf /kontrolle,
 // nie automatisch — die Wiederherstellung soll davon nichts merken.
 async function listePruefen() {
   const vorher = knownUsers.map(u => !!u.kontakt);
@@ -1307,7 +1307,7 @@ async function handleUpdate(update) {
       } else {
         await sendWelcomeMenu(chatId);
       }
-    } else if (text === "/prüfen" || text === "/pruefen") {
+    } else if (text === "/kontrolle") {
       // Nur Besitzer: geht die Liste durch und setzt die Punkte neu.
       if (String(chatId) === String(YOUR_CHAT_ID)) {
         await dbLoad();
@@ -1363,7 +1363,7 @@ async function handleUpdate(update) {
           `/heute — wer heute im Warteraum angenommen wurde\n` +
           `/fehlen — im Warteraum, aber nicht im Hauptkanal\n` +
           `/gespeichert — wen der Bot im Speicher hat\n` +
-          `/prüfen — Liste durchgehen: wem kann ich schreiben? (🟢/🔴)\n` +
+          `/kontrolle — Liste durchgehen: wem kann ich schreiben? (🟢/🔴)\n` +
           `/wartezimmer — Willkommensnachricht in den Warteraum posten\n` +
           `/hauptkanal — Sortiment in den Hauptkanal posten\n` +
           `/befehle — diese Übersicht\n\n` +

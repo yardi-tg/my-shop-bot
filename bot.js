@@ -1,5 +1,6 @@
 const express = require("express");
 const cors = require("cors");
+const crypto = require("crypto");
 
 const app = express();
 app.use(cors());
@@ -26,7 +27,7 @@ const WAITING_ROOM_CHAT_ID = ""; // z.B. "-1001234567890" — leer = überall
 const WAITING_ROOM_POST_ID = "-1003955096282";          // Kanal, in den gepostet wird
 const MAIN_CHANNEL_URL = "https://t.me/+xTzxPx24HoBjMDJk"; // Button-Ziel (Hauptkanal)
 const MAIN_CHANNEL_ID = "-1004383770209";   // Chat-ID des Hauptkanals
-const BOT_USERNAME = "Arbeiter5_bot";                      // für den Shop-Button im Hauptkanal-Post
+const BOT_USERNAME = "Arbeiter7_bot";                      // für den Shop-Button im Hauptkanal-Post
 // Liste der heute akzeptierten Personen (für "/code" Übersicht)
 let approvedToday = [];
 let approvedDay = new Date().toISOString().slice(0, 10);
@@ -466,10 +467,395 @@ app.post("/check-code", (req, res) => {
   }
 });
 
-// ── Webhook — handles all incoming Telegram messages ─────────
-app.post("/webhook", async (req, res) => {
+// ══════════════════════════════════════════════════════════════
+// 💬 COMMUNITY (Supabase)
+// ══════════════════════════════════════════════════════════════
+// Die Mini App spricht NUR mit diesem Server. Der Supabase-Schlüssel
+// bleibt hier auf Render und taucht nie im Browser auf.
+// Die Identität kommt als Telegram-initData und wird hier geprüft.
+
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_SECRET_KEY = process.env.SUPABASE_SECRET_KEY;
+
+// ── initData prüfen (Telegram-Signatur) ───────────────────────
+function validateTelegramInitData(initData) {
   try {
-    const update = req.body;
+    if (!BOT_TOKEN || !initData) return null;
+
+    const params = new URLSearchParams(initData);
+    const hash = params.get("hash");
+    const authDate = Number(params.get("auth_date"));
+    if (!hash || !authDate) return null;
+
+    // Nicht älter als 24 Stunden
+    if (Math.abs(Math.floor(Date.now() / 1000) - authDate) > 86400) return null;
+
+    params.delete("hash");
+    const dataCheckString = [...params.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, value]) => `${key}=${value}`)
+      .join("\n");
+
+    const secretKey = crypto.createHmac("sha256", "WebAppData").update(BOT_TOKEN).digest();
+    const calculated = crypto.createHmac("sha256", secretKey).update(dataCheckString).digest("hex");
+
+    const a = Buffer.from(calculated, "hex");
+    const b = Buffer.from(hash, "hex");
+    if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;
+
+    const userRaw = params.get("user");
+    if (!userRaw) return null;
+    return JSON.parse(userRaw);
+  } catch (e) {
+    console.error("validateTelegramInitData:", e.message);
+    return null;
+  }
+}
+
+function getCommunityAuth(req, res) {
+  const telegramUser = validateTelegramInitData(req.headers["x-telegram-init-data"]);
+  if (!telegramUser?.id) {
+    res.status(401).json({ ok: false, error: "Nicht autorisiert." });
+    return null;
+  }
+  return telegramUser;
+}
+
+// ── Supabase-Aufruf ───────────────────────────────────────────
+async function supabaseRequest(path, options = {}) {
+  if (!SUPABASE_URL || !SUPABASE_SECRET_KEY) {
+    throw new Error("Supabase-Variablen fehlen (SUPABASE_URL / SUPABASE_SECRET_KEY).");
+  }
+  const headers = {
+    apikey: SUPABASE_SECRET_KEY,
+    Authorization: `Bearer ${SUPABASE_SECRET_KEY}`,
+    "Content-Type": "application/json",
+    ...(options.headers || {}),
+  };
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, { ...options, headers });
+  const text = await response.text();
+  let data = null;
+  try { data = text ? JSON.parse(text) : null; } catch { data = text; }
+  if (!response.ok) {
+    const message = typeof data === "string" ? data : (data?.message || data?.hint || JSON.stringify(data));
+    throw new Error(`Supabase ${response.status}: ${message}`);
+  }
+  return data;
+}
+
+// ── Anonyme Nummer: 6 Ziffern, pro Person fest ────────────────
+function randomAnonDigits() {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+async function makeFreeAnonNumber() {
+  for (let i = 0; i < 8; i++) {
+    const candidate = randomAnonDigits();
+    try {
+      const taken = await supabaseRequest(
+        `community_users?anon_number=eq.${encodeURIComponent(candidate)}&select=id&limit=1`,
+        { method: "GET" }
+      );
+      if (!taken?.length) return candidate;
+    } catch (e) {
+      return candidate; // Prüfung fehlgeschlagen — Nummer trotzdem nehmen
+    }
+  }
+  return String(Date.now()).slice(-6); // Notnagel
+}
+
+async function getOrCreateCommunityUser(telegramUser) {
+  const telegramId = String(telegramUser.id);
+
+  const existing = await supabaseRequest(
+    `community_users?telegram_user_id=eq.${encodeURIComponent(telegramId)}&select=id,telegram_user_id,anon_number&limit=1`,
+    { method: "GET" }
+  );
+
+  if (existing?.length) {
+    const user = existing[0];
+    // Name/Username aktualisieren (Fehler hier dürfen nichts blockieren)
+    supabaseRequest(
+      `community_users?id=eq.${encodeURIComponent(user.id)}`,
+      {
+        method: "PATCH",
+        headers: { Prefer: "return=minimal" },
+        body: JSON.stringify({
+          telegram_username: telegramUser.username || null,
+          telegram_first_name: telegramUser.first_name || null,
+          telegram_last_name: telegramUser.last_name || null,
+          last_seen_at: new Date().toISOString(),
+        }),
+      }
+    ).catch(() => {});
+    return user;
+  }
+
+  const anonNumber = await makeFreeAnonNumber();
+
+  try {
+    const created = await supabaseRequest("community_users", {
+      method: "POST",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({
+        telegram_user_id: telegramUser.id,
+        anon_number: anonNumber,
+        telegram_username: telegramUser.username || null,
+        telegram_first_name: telegramUser.first_name || null,
+        telegram_last_name: telegramUser.last_name || null,
+      }),
+    });
+    return created[0];
+  } catch (e) {
+    // Zwei Anfragen gleichzeitig: vorhandenen Datensatz nachladen
+    const retry = await supabaseRequest(
+      `community_users?telegram_user_id=eq.${encodeURIComponent(telegramId)}&select=id,telegram_user_id,anon_number&limit=1`,
+      { method: "GET" }
+    );
+    if (retry?.length) return retry[0];
+    throw e;
+  }
+}
+
+// ── Anzeigename ───────────────────────────────────────────────
+function communityLabel(user, mode) {
+  const isMod = String(user.telegram_user_id) === String(YOUR_CHAT_ID);
+  if (isMod) return mode === "anonymous" ? `Anonym #${randomAnonDigits()}` : "Milord";
+  return `Anonym #${user.anon_number}`;
+}
+
+// ── Spam-Bremse (im Speicher, reicht völlig) ──────────────────
+const communityLastAction = new Map();
+const COMMUNITY_WAIT = { post: 30000, reply: 12000 };
+
+// Prüft nur — zählt NICHT. So blockiert ein fehlgeschlagener Versuch nicht.
+function communityTooFast(userId, kind) {
+  const last = communityLastAction.get(`${userId}:${kind}`) || 0;
+  const rest = COMMUNITY_WAIT[kind] - (Date.now() - last);
+  return rest > 0 ? Math.ceil(rest / 1000) : 0;
+}
+
+// Wird erst aufgerufen, wenn wirklich gespeichert wurde.
+function communityMarkAction(userId, kind) {
+  communityLastAction.set(`${userId}:${kind}`, Date.now());
+}
+
+// ── Benachrichtigung an den Besitzer (OHNE HTML — freier Text) ─
+async function notifyCommunityModerator(type, telegramUser, anonLabel, body, recordId) {
+  try {
+    const name = [telegramUser.first_name, telegramUser.last_name].filter(Boolean).join(" ") || "Unbekannt";
+    const username = telegramUser.username ? `@${telegramUser.username}` : "kein Username";
+    const text =
+`💬 COMMUNITY ${type === "post" ? "BEITRAG" : "ANTWORT"}
+
+👤 Telegram: ${name}
+🔗 Username: ${username}
+🆔 Telegram-ID: ${telegramUser.id}
+
+🕶️ Angezeigt als: ${anonLabel}
+
+📝 Inhalt:
+${body}
+
+📌 ID: ${recordId}`;
+
+    await fetch(`${TELEGRAM_API}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: YOUR_CHAT_ID, text, disable_notification: true }),
+    });
+  } catch (e) {
+    console.error("notifyCommunityModerator:", e.message);
+  }
+}
+
+// ── Community laden ───────────────────────────────────────────
+app.get("/community", async (req, res) => {
+  try {
+    const telegramUser = getCommunityAuth(req, res);
+    if (!telegramUser) return;
+
+    const [posts, replies] = await Promise.all([
+      supabaseRequest(
+        "community_posts?select=id,body,author_label,created_at&order=created_at.desc&limit=100",
+        { method: "GET" }
+      ),
+      supabaseRequest(
+        "community_replies?select=id,post_id,body,author_label,created_at&order=created_at.asc&limit=500",
+        { method: "GET" }
+      ),
+    ]);
+
+    const replyMap = {};
+    for (const r of replies || []) {
+      (replyMap[r.post_id] = replyMap[r.post_id] || []).push({
+        id: r.id, body: r.body, author_label: r.author_label, created_at: r.created_at,
+      });
+    }
+
+    res.json({
+      ok: true,
+      isModerator: String(telegramUser.id) === String(YOUR_CHAT_ID),
+      posts: (posts || []).map(p => ({
+        id: p.id,
+        body: p.body,
+        author_label: p.author_label,
+        created_at: p.created_at,
+        replies: replyMap[p.id] || [],
+      })),
+    });
+  } catch (e) {
+    console.error("GET /community:", e.message);
+    res.status(500).json({ ok: false, error: "Community konnte nicht geladen werden." });
+  }
+});
+
+// ── Beitrag schreiben ─────────────────────────────────────────
+app.post("/community/posts", async (req, res) => {
+  try {
+    const telegramUser = getCommunityAuth(req, res);
+    if (!telegramUser) return;
+
+    const body = String(req.body?.body || "").trim();
+    if (!body) return res.status(400).json({ ok: false, error: "Der Beitrag darf nicht leer sein." });
+    if (body.length > 2000) return res.status(400).json({ ok: false, error: "Maximal 2.000 Zeichen." });
+
+    const wait = communityTooFast(telegramUser.id, "post");
+    if (wait) return res.status(429).json({ ok: false, error: `Bitte noch ${wait} Sekunden warten.` });
+
+    const user = await getOrCreateCommunityUser(telegramUser);
+    const isMod = String(telegramUser.id) === String(YOUR_CHAT_ID);
+    const mode = req.body?.authorMode === "anonymous" ? "anonymous" : "milord";
+    const authorLabel = communityLabel(user, isMod ? mode : "stable");
+
+    const created = await supabaseRequest("community_posts", {
+      method: "POST",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({ user_id: user.id, body, author_label: authorLabel }),
+    });
+
+    const post = created[0];
+    communityMarkAction(telegramUser.id, "post");
+    await notifyCommunityModerator("post", telegramUser, authorLabel, body, post.id);
+
+    res.json({
+      ok: true,
+      post: { id: post.id, body: post.body, author_label: post.author_label, created_at: post.created_at, replies: [] },
+    });
+  } catch (e) {
+    console.error("POST /community/posts:", e.message);
+    res.status(500).json({ ok: false, error: "Beitrag konnte nicht gespeichert werden." });
+  }
+});
+
+// ── Antwort schreiben ─────────────────────────────────────────
+app.post("/community/replies", async (req, res) => {
+  try {
+    const telegramUser = getCommunityAuth(req, res);
+    if (!telegramUser) return;
+
+    const postId = String(req.body?.postId || "").trim();
+    const body = String(req.body?.body || "").trim();
+    if (!postId) return res.status(400).json({ ok: false, error: "Beitrag fehlt." });
+    if (!body) return res.status(400).json({ ok: false, error: "Die Antwort darf nicht leer sein." });
+    if (body.length > 1000) return res.status(400).json({ ok: false, error: "Maximal 1.000 Zeichen." });
+
+    const wait = communityTooFast(telegramUser.id, "reply");
+    if (wait) return res.status(429).json({ ok: false, error: `Bitte noch ${wait} Sekunden warten.` });
+
+    const postCheck = await supabaseRequest(
+      `community_posts?id=eq.${encodeURIComponent(postId)}&select=id&limit=1`,
+      { method: "GET" }
+    );
+    if (!postCheck?.length) return res.status(404).json({ ok: false, error: "Beitrag nicht gefunden." });
+
+    const user = await getOrCreateCommunityUser(telegramUser);
+    const isMod = String(telegramUser.id) === String(YOUR_CHAT_ID);
+    const mode = req.body?.authorMode === "anonymous" ? "anonymous" : "milord";
+    const authorLabel = communityLabel(user, isMod ? mode : "stable");
+
+    const created = await supabaseRequest("community_replies", {
+      method: "POST",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({ post_id: postId, user_id: user.id, body, author_label: authorLabel }),
+    });
+
+    const reply = created[0];
+    communityMarkAction(telegramUser.id, "reply");
+    await notifyCommunityModerator("reply", telegramUser, authorLabel, body, reply.id);
+
+    res.json({
+      ok: true,
+      reply: { id: reply.id, post_id: reply.post_id, body: reply.body, author_label: reply.author_label, created_at: reply.created_at },
+    });
+  } catch (e) {
+    console.error("POST /community/replies:", e.message);
+    res.status(500).json({ ok: false, error: "Antwort konnte nicht gespeichert werden." });
+  }
+});
+
+// ── Beitrag löschen — nur Besitzer ────────────────────────────
+app.delete("/community/posts/:id", async (req, res) => {
+  try {
+    const telegramUser = getCommunityAuth(req, res);
+    if (!telegramUser) return;
+    if (String(telegramUser.id) !== String(YOUR_CHAT_ID)) {
+      return res.status(403).json({ ok: false, error: "Keine Berechtigung." });
+    }
+    const id = String(req.params.id || "").trim();
+    if (!id) return res.status(400).json({ ok: false, error: "ID fehlt." });
+
+    await supabaseRequest(`community_replies?post_id=eq.${encodeURIComponent(id)}`, {
+      method: "DELETE", headers: { Prefer: "return=minimal" },
+    }).catch(() => {});
+    await supabaseRequest(`community_posts?id=eq.${encodeURIComponent(id)}`, {
+      method: "DELETE", headers: { Prefer: "return=minimal" },
+    });
+
+    res.json({ ok: true });
+  } catch (e) {
+    console.error("DELETE /community/posts:", e.message);
+    res.status(500).json({ ok: false, error: "Beitrag konnte nicht gelöscht werden." });
+  }
+});
+
+// ── Antwort löschen — nur Besitzer ────────────────────────────
+app.delete("/community/replies/:id", async (req, res) => {
+  try {
+    const telegramUser = getCommunityAuth(req, res);
+    if (!telegramUser) return;
+    if (String(telegramUser.id) !== String(YOUR_CHAT_ID)) {
+      return res.status(403).json({ ok: false, error: "Keine Berechtigung." });
+    }
+    const id = String(req.params.id || "").trim();
+    if (!id) return res.status(400).json({ ok: false, error: "ID fehlt." });
+
+    await supabaseRequest(`community_replies?id=eq.${encodeURIComponent(id)}`, {
+      method: "DELETE", headers: { Prefer: "return=minimal" },
+    });
+
+    res.json({ ok: true });
+  } catch (e) {
+    console.error("DELETE /community/replies:", e.message);
+    res.status(500).json({ ok: false, error: "Antwort konnte nicht gelöscht werden." });
+  }
+});
+
+// ── Webhook — handles all incoming Telegram messages ─────────
+app.post("/webhook", (req, res) => {
+  // Telegram SOFORT bestätigen. Antwortet der Server mit einem Fehler oder zu spät,
+  // schickt Telegram dasselbe Update minutenlang erneut — das erzeugt doppelte
+  // Nachrichten und doppelte Sterne-Vergaben.
+  res.json({ ok: true });
+  handleUpdate(req.body).catch(err => console.error("Webhook error:", err));
+});
+
+// Hinweis: "res" ist hier absichtlich eine Attrappe. Die Antwort an Telegram ging
+// oben schon raus; die vielen "return res.json({ok:true})" bleiben aber als
+// Ablaufsteuerung erhalten, damit sich am bewährten Ablauf nichts ändert.
+async function handleUpdate(update) {
+  const res = { json: () => {}, status: () => ({ json: () => {} }) };
+  try {
 
     // ── Beitrittsanfrage im Warteraum (automatisch annehmen) ──
     if (update.chat_join_request) {
@@ -899,45 +1285,8 @@ app.post("/webhook", async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     console.error("Webhook error:", err);
-    res.status(500).json({ error: "Webhook failed" });
   }
-});
-
-// ── /order endpoint ───────────────────────────────────────────
-app.post("/order", async (req, res) => {
-  try {
-    const order = req.body;
-    if (!order || !order.items || order.items.length === 0) {
-      return res.status(400).json({ error: "Empty order" });
-    }
-    const { items, total, currency, note } = order;
-    const user = order.user || {};   // fehlende Nutzerdaten dürfen nicht abstürzen
-    const itemLines = items
-      .map((i) => `  • ${i.qty}x ${i.name}  —  ${currency} ${i.qty * i.price}`)
-      .join("\n");
-    const noteSection = note ? `\n📝 <b>Note:</b> ${note}` : "";
-    const ownerMsg =
-      `🛍️ <b>New Order!</b>\n\n` +
-      `👤 <b>Customer:</b> ${user.name} (${user.handle})\n` +
-      `🆔 <b>Telegram ID:</b> <code>${user.id}</code>\n\n` +
-      `<b>Items:</b>\n${itemLines}\n\n` +
-      `💰 <b>Total:</b> ${currency} ${total}` +
-      noteSection +
-      `\n\n⏰ ${new Date().toLocaleString()}`;
-    await sendOrderToOwner(ownerMsg, user.id, user.handle);
-    if (order.user?.id && order.user.id !== "N/A") {
-      await sendWithShopButton(
-        order.user.id,
-        `✅ <b>Bestellung erhalten!</b>\n\nDanke ${user.name || ""}! Wir haben deine Bestellung erhalten und melden uns in Kürze! 🙏`,
-        "🛒 Nochmal bestellen"
-      );
-    }
-    res.json({ success: true });
-  } catch (err) {
-    console.error("Order error:", err);
-    res.status(500).json({ error: "Failed to process order" });
-  }
-});
+}
 
 // ── Health check ──────────────────────────────────────────────
 app.get("/", (req, res) => {

@@ -27,7 +27,7 @@ const WAITING_ROOM_CHAT_ID = ""; // z.B. "-1001234567890" — leer = überall
 const WAITING_ROOM_POST_ID = "-1003955096282";          // Kanal, in den gepostet wird
 const MAIN_CHANNEL_URL = "https://t.me/+xTzxPx24HoBjMDJk"; // Button-Ziel (Hauptkanal)
 const MAIN_CHANNEL_ID = "-1004383770209";   // Chat-ID des Hauptkanals
-const BOT_USERNAME = "Arbeiter7_bot";                      // für den Shop-Button im Hauptkanal-Post
+const BOT_USERNAME = "Arbeiter4_bot";                      // für den Shop-Button im Hauptkanal-Post
 // Liste der heute akzeptierten Personen (für "/code" Übersicht)
 let approvedToday = [];
 let approvedDay = new Date().toISOString().slice(0, 10);
@@ -45,6 +45,15 @@ const DB_MARKER = "⭐ BLOCKTHEKE-SPEICHER (nicht löschen)";
 const DB_SEP = "─────────────";
 const STARS_GOAL = 10;      // Sterne bis zum Gratis-Raucher
 
+// Erreichbarkeits-Punkt. 🟢 = der Bot hat von dieser Person wirklich schon etwas
+// bekommen und kann ihr schreiben. 🔴 = noch nie Kontakt, oder Zustellung gescheitert.
+// WICHTIG: Der Punkt steht IM SELBEN FELD wie die Sternezahl ("9 🟢"), nicht als
+// eigenes Feld. Die Wiederherstellung liest das letzte Feld als Sternezahl —
+// ein eigenes Feld würde dort alle Sterne auf 0 setzen.
+const DOT_ON = "🟢";
+const DOT_OFF = "🔴";
+const dot = u => (u.kontakt ? DOT_ON : DOT_OFF);
+
 // Baut die angepinnte Nachricht: schöne Übersicht + Rohdaten darunter
 function usersToText() {
   const withStars = knownUsers.filter(u => (u.stars || 0) > 0);
@@ -57,13 +66,15 @@ function usersToText() {
   if (withStars.length === 0) {
     view += `\nNoch keine Sterne vergeben.\n`;
   } else {
-    const line = u => `${u.handle} — ${u.stars || 0}/${STARS_GOAL}`;
+    const line = u => `${dot(u)} ${u.handle} — ${u.stars || 0}/${STARS_GOAL}`;
     if (full.length)  view += `\n🎉 VOLL (${full.length})\n` + full.map(line).join("\n") + "\n";
     if (close.length) view += `\nKURZ DAVOR\n` + close.map(line).join("\n") + "\n";
     if (going.length) view += `\nUNTERWEGS\n` + going.map(line).join("\n") + "\n";
   }
   view += `\nErfasst: ${knownUsers.length} Personen\n${DB_SEP}\n`;
-  view += knownUsers.map(u => `${u.id}|${u.handle}|${u.name}|${u.stars || 0}`).join("\n");
+  const erreichbar = knownUsers.filter(u => u.kontakt).length;
+  view += `${DOT_ON} erreichbar: ${erreichbar} von ${knownUsers.length}\n`;
+  view += knownUsers.map(u => `${u.id}|${u.handle}|${u.name}|${u.stars || 0} ${dot(u)}`).join("\n");
   return view;
 }
 
@@ -79,13 +90,16 @@ function textToUsers(text) {
     if (parts.length < 3) continue;
     const id = parts[0].trim();
     if (!/^\d+$/.test(id)) continue;          // keine gültige ID -> überspringen
-    const stars = parseInt(parts[parts.length - 1], 10);
+    const letztes = parts[parts.length - 1];
+    const stars = parseInt(letztes, 10);          // "9 🟢" -> 9, der Punkt stört nicht
     const hasStars = !isNaN(stars) && parts.length >= 4;
     out.push({
       id,
       handle: parts[1] || "kein Username",
       name: (hasStars ? parts.slice(2, -1) : parts.slice(2)).join("|") || "Unbekannt",
       stars: hasStars ? stars : 0,
+      // Alte Sicherungen ohne Punkt: gilt als noch nicht erreichbar.
+      kontakt: hasStars && String(letztes).includes(DOT_ON),
     });
   }
   return out.length ? out : null;
@@ -196,6 +210,9 @@ async function giveStars(user, amount) {
       `Fragen? 👉 @mi1lord9`;
 
   const delivered = await notifyCustomer(user, kundeText);
+  // Der Punkt folgt der Wirklichkeit: geklappt = grün, nicht geklappt = rot.
+  // Der Versuch findet IMMER statt, egal welche Farbe vorher stand.
+  if (user.kontakt !== delivered) { user.kontakt = delivered; await dbSave(); }
 
   let report = reached
     ? `🎉 <b>${user.handle} hat die Karte voll!</b>\n` +
@@ -208,16 +225,86 @@ async function giveStars(user, amount) {
   return report;
 }
 
+// Klopft still an, ohne etwas zu verschicken: "schreibt gerade…" für 2–3 Sekunden.
+// Antwortet Telegram mit ok, kann der Bot der Person schreiben.
+async function kannIchSchreiben(userId) {
+  try {
+    const r = await fetch(`${TELEGRAM_API}/sendChatAction`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: userId, action: "typing" }),
+    });
+    const j = await r.json();
+    return { ok: !!j.ok, grund: j.description || "" };
+  } catch (e) {
+    return { ok: false, grund: e.message };
+  }
+}
+
+// Geht die ganze Liste durch und setzt die Punkte neu. Läuft NUR auf /prüfen,
+// nie automatisch — die Wiederherstellung soll davon nichts merken.
+async function listePruefen() {
+  const vorher = knownUsers.map(u => !!u.kontakt);
+  const nichtErreichbar = [];
+  for (let i = 0; i < knownUsers.length; i++) {
+    const u = knownUsers[i];
+    const { ok } = await kannIchSchreiben(u.id);
+    u.kontakt = ok;
+    if (!ok) nichtErreichbar.push(u);
+    await new Promise(r => setTimeout(r, 120));   // Telegram nicht überrennen
+  }
+  const neuGruen = knownUsers.filter((u, i) => u.kontakt && !vorher[i]);
+  const neuRot   = knownUsers.filter((u, i) => !u.kontakt && vorher[i]);
+  await dbSave();
+  return { nichtErreichbar, neuGruen, neuRot };
+}
+
 function rememberUser(u) {
   const found = knownUsers.find(x => String(x.id) === String(u.id));
   if (found) {
-    // Namen/Handle auffrischen, Sterne behalten
-    if (u.handle && u.handle !== "kein Username") found.handle = u.handle;
-    if (u.name && u.name !== "Unbekannt") found.name = u.name;
-    return false;
+    // Namen/Handle auffrischen, Sterne behalten.
+    // Gibt true zurück, wenn sich wirklich etwas geändert hat — nur dann wird gespeichert.
+    let geaendert = false;
+    if (u.handle && u.handle !== "kein Username" && found.handle !== u.handle) {
+      found.handle = u.handle; geaendert = true;
+    }
+    if (u.name && u.name !== "Unbekannt" && found.name !== u.name) {
+      found.name = u.name; geaendert = true;
+    }
+    // 🔴 -> 🟢, sobald der Bot wirklich etwas von der Person bekommen hat
+    if (u.kontakt && !found.kontakt) { found.kontakt = true; geaendert = true; }
+    return geaendert;
   }
   knownUsers.push({ ...u, stars: u.stars || 0 });
   return true;
+}
+
+// Merkt sich jeden, der dem Bot schreibt oder einen Knopf drückt.
+// Telegram erlaubt keine Suche nach @Username — der Bot kann nur festhalten,
+// wer sich bei ihm meldet. Gespeichert wird nur bei echter Änderung.
+async function rememberFrom(from) {
+  if (!from?.id) return;
+  if (String(from.id) === String(YOUR_CHAT_ID)) return;   // dich selbst nicht
+  const handle = from.username ? `@${from.username}` : "kein Username";
+  const name = [from.first_name, from.last_name].filter(Boolean).join(" ") || "Unbekannt";
+  await dbLoad();
+
+  // Stand VOR der Änderung merken, um "wirklich neu" zu erkennen
+  const warSchonDa = knownUsers.some(x => String(x.id) === String(from.id));
+
+  // kontakt: true — wer schreibt, ist erreichbar
+  if (rememberUser({ id: from.id, handle, name, kontakt: true })) await dbSave();
+
+  // Nur bei WIRKLICH neuen Personen eine Meldung — sonst käme sie bei
+  // jedem /start erneut, und das drücken Leute ständig.
+  if (!warSchonDa) {
+    const meldung =
+      `🆕 <b>Neu in der Liste</b>\n` +
+      `👤 ${handle} / ${name}\n` +
+      `🆔 User-ID: <code>${from.id}</code>\n` +
+      `${DOT_ON} <i>erreichbar — hat dem Bot geschrieben</i>`;
+    try { await sendTelegramMessage(YOUR_CHAT_ID, meldung); }
+    catch (e) { console.error("Neu-Meldung:", e.message); }
+  }
 }
 // Prüft für EINEN bekannten Nutzer, ob er im angegebenen Kanal ist
 async function isInChat(chatId, userId) {
@@ -400,7 +487,7 @@ async function handleJoinRequest(joinReq) {
 
   // dauerhaft merken (für den /fehlen-Befehl)
   await dbLoad();
-  if (rememberUser({ id: userId, handle, name })) await dbSave();
+  if (rememberUser({ id: userId, handle, name, kontakt: false })) await dbSave();
 
   // 3) Admin privat benachrichtigen
   const adminMsg =
@@ -868,6 +955,7 @@ async function handleUpdate(update) {
       const cq = update.callback_query;
       const cbChatId = cq.message?.chat?.id;
       const data = cq.data;
+      await rememberFrom(cq.from);   // auch Knopfdrücke zählen als Kontakt
       // Ladeanimation am Button beenden
       await fetch(`${TELEGRAM_API}/answerCallbackQuery`, {
         method: "POST",
@@ -899,6 +987,9 @@ async function handleUpdate(update) {
 
     const text = message.text || "";
     const firstName = message.from?.first_name || "there";
+
+    // Absender merken (oder Username auffrischen), bevor irgendetwas anderes passiert
+    await rememberFrom(message.from);
 
     if (update.message?.web_app_data) {
       const orderText = update.message.web_app_data.data;
@@ -1172,7 +1263,7 @@ async function handleUpdate(update) {
           const s = u.stars || 0;
           const bar = "★".repeat(s) + "☆".repeat(Math.max(0, STARS_GOAL - s));
           const fehlt = STARS_GOAL - s;
-          return `${u.handle}\n${bar}  <b>${s}/${STARS_GOAL}</b>` +
+          return `${dot(u)} ${u.handle}\n${bar}  <b>${s}/${STARS_GOAL}</b>` +
                  (fehlt > 0 ? `  <i>(noch ${fehlt})</i>` : ``);
         };
         let out = `⭐ <b>Sterne-Übersicht</b>\n`;
@@ -1180,7 +1271,8 @@ async function handleUpdate(update) {
         if (nah.length)   out += `\n🔥 <b>KURZ DAVOR</b>\n` + nah.map(zeile).join("\n\n") + `\n`;
         if (start.length) out += `\n<b>UNTERWEGS</b>\n` + start.map(zeile).join("\n\n") + `\n`;
         out += `\n─────────────\n` +
-               `Mit Sternen: <b>${mit.length}</b> · Erfasst gesamt: ${knownUsers.length}`;
+               `Mit Sternen: <b>${mit.length}</b> · Erfasst gesamt: ${knownUsers.length}\n` +
+               `${DOT_ON} erreichbar: ${knownUsers.filter(u => u.kontakt).length} von ${knownUsers.length}`;
         // lange Listen in Blöcke teilen (Telegram-Limit)
         if (out.length <= 3800) {
           await sendTelegramMessage(chatId, out);
@@ -1202,11 +1294,53 @@ async function handleUpdate(update) {
         if (knownUsers.length === 0) {
           await sendTelegramMessage(chatId, `📭 <i>Speicher ist leer.</i>`);
         } else {
-          const lines = knownUsers.map((u, i) => `${i + 1}. ${u.handle} / ${u.name}`);
-          let block = `🗂 <b>Gespeichert: ${knownUsers.length} Personen</b>\n\n`;
+          const lines = knownUsers.map((u, i) => `${i + 1}. ${dot(u)} ${u.handle} / ${u.name}`);
+          const erreichbar = knownUsers.filter(u => u.kontakt).length;
+          let block = `🗂 <b>Gespeichert: ${knownUsers.length} Personen</b>\n` +
+                      `${DOT_ON} erreichbar: ${erreichbar} · ${DOT_OFF} noch nicht: ${knownUsers.length - erreichbar}\n\n`;
           for (const l of lines) {
             if ((block + l).length > 3800) { await sendTelegramMessage(chatId, block); block = ""; }
             block += l + "\n";
+          }
+          if (block.trim()) await sendTelegramMessage(chatId, block);
+        }
+      } else {
+        await sendWelcomeMenu(chatId);
+      }
+    } else if (text === "/prüfen" || text === "/pruefen") {
+      // Nur Besitzer: geht die Liste durch und setzt die Punkte neu.
+      if (String(chatId) === String(YOUR_CHAT_ID)) {
+        await dbLoad();
+        if (knownUsers.length === 0) {
+          await sendTelegramMessage(chatId, `📭 <i>Speicher ist leer — nichts zu prüfen.</i>`);
+          return res.json({ ok: true });
+        }
+        await sendTelegramMessage(chatId,
+          `🔎 <b>Prüfe ${knownUsers.length} Personen…</b>\n` +
+          `<i>Es wird nichts verschickt. Dauert etwa ${Math.ceil(knownUsers.length * 0.2)} Sekunden.</i>`
+        );
+        const { nichtErreichbar, neuGruen, neuRot } = await listePruefen();
+        const erreichbar = knownUsers.length - nichtErreichbar.length;
+
+        let out = `✅ <b>Prüfung fertig</b>\n\n` +
+                  `${DOT_ON} erreichbar: <b>${erreichbar}</b>\n` +
+                  `${DOT_OFF} nicht erreichbar: <b>${nichtErreichbar.length}</b>\n`;
+        if (neuGruen.length) out += `\n🔄 <b>Neu auf ${DOT_ON} (${neuGruen.length})</b>\n` +
+                                    neuGruen.map(u => `${u.handle} / ${u.name}`).join("\n") + `\n`;
+        if (neuRot.length)   out += `\n🔄 <b>Neu auf ${DOT_OFF} (${neuRot.length})</b>\n` +
+                                    neuRot.map(u => `${u.handle} / ${u.name}`).join("\n") + `\n`;
+        if (nichtErreichbar.length) {
+          out += `\n${DOT_OFF} <b>Kann ich nicht schreiben</b>\n` +
+                 nichtErreichbar.map((u, i) => `${i + 1}. ${u.handle} / ${u.name}`).join("\n") + `\n` +
+                 `\n<i>Sterne kannst du ihnen trotzdem geben — der Bot versucht es immer und sagt dir, ob es ankam.</i>`;
+        }
+        if (out.length <= 3800) {
+          await sendTelegramMessage(chatId, out);
+        } else {
+          let block = "";
+          for (const line of out.split("\n")) {
+            if ((block + line).length > 3800) { await sendTelegramMessage(chatId, block); block = ""; }
+            block += line + "\n";
           }
           if (block.trim()) await sendTelegramMessage(chatId, block);
         }
@@ -1229,6 +1363,7 @@ async function handleUpdate(update) {
           `/heute — wer heute im Warteraum angenommen wurde\n` +
           `/fehlen — im Warteraum, aber nicht im Hauptkanal\n` +
           `/gespeichert — wen der Bot im Speicher hat\n` +
+          `/prüfen — Liste durchgehen: wem kann ich schreiben? (🟢/🔴)\n` +
           `/wartezimmer — Willkommensnachricht in den Warteraum posten\n` +
           `/hauptkanal — Sortiment in den Hauptkanal posten\n` +
           `/befehle — diese Übersicht\n\n` +

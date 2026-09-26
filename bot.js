@@ -240,6 +240,44 @@ async function kannIchSchreiben(userId) {
   }
 }
 
+// Fragt Telegram nach dem aktuellen Stand einer Person (Username, Name).
+// Klappt nur, wenn der Bot die Person überhaupt kennt — sonst kommt ein Fehler.
+async function stammdatenHolen(userId) {
+  try {
+    const r = await fetch(`${TELEGRAM_API}/getChat?chat_id=${userId}`);
+    const j = await r.json();
+    if (!j.ok || !j.result) return null;
+    return j.result;
+  } catch (e) { return null; }
+}
+
+// Frischt Username und Name für alle Gespeicherten auf, ohne dass jemand
+// dem Bot schreiben muss. Läuft NUR auf /usernames.
+async function usernamesAuffrischen() {
+  const geaendert = [];
+  const nichtErreicht = [];
+  for (const u of knownUsers) {
+    const daten = await stammdatenHolen(u.id);
+    await new Promise(r => setTimeout(r, 120));   // Telegram nicht überrennen
+    if (!daten) { nichtErreicht.push(u); continue; }
+
+    const neuerHandle = daten.username ? `@${daten.username}` : null;
+    const neuerName = [daten.first_name, daten.last_name].filter(Boolean).join(" ") || null;
+    const vorher = { handle: u.handle, name: u.name };
+
+    // Nur überschreiben, wenn Telegram wirklich etwas geliefert hat.
+    // Ein leeres Feld darf einen guten Eintrag nie kaputtmachen.
+    if (neuerHandle && neuerHandle !== u.handle) u.handle = neuerHandle;
+    if (neuerName && neuerName !== u.name) u.name = neuerName;
+
+    if (vorher.handle !== u.handle || vorher.name !== u.name) {
+      geaendert.push({ vorher, jetzt: { handle: u.handle, name: u.name } });
+    }
+  }
+  if (geaendert.length) await dbSave();
+  return { geaendert, nichtErreicht };
+}
+
 // Geht die ganze Liste durch und setzt die Punkte neu. Läuft NUR auf /kontrolle,
 // nie automatisch — die Wiederherstellung soll davon nichts merken.
 async function listePruefen() {
@@ -1307,6 +1345,47 @@ async function handleUpdate(update) {
       } else {
         await sendWelcomeMenu(chatId);
       }
+    } else if (text === "/usernames") {
+      // Nur Besitzer: holt für alle Gespeicherten den aktuellen Username von Telegram.
+      if (String(chatId) === String(YOUR_CHAT_ID)) {
+        await dbLoad();
+        if (knownUsers.length === 0) {
+          await sendTelegramMessage(chatId, `📭 <i>Speicher ist leer — nichts aufzufrischen.</i>`);
+          return res.json({ ok: true });
+        }
+        await sendTelegramMessage(chatId,
+          `🔄 <b>Frische ${knownUsers.length} Einträge auf…</b>\n` +
+          `<i>Es wird nichts verschickt. Dauert etwa ${Math.ceil(knownUsers.length * 0.2)} Sekunden.</i>`
+        );
+        const { geaendert, nichtErreicht } = await usernamesAuffrischen();
+
+        let out = `✅ <b>Fertig</b>\n\n`;
+        if (geaendert.length === 0) {
+          out += `Nichts hat sich geändert — alle Einträge waren aktuell.\n`;
+        } else {
+          out += `<b>Aktualisiert (${geaendert.length})</b>\n` +
+                 geaendert.map(g =>
+                   `${g.vorher.handle} / ${g.vorher.name}\n➡️ <b>${g.jetzt.handle}</b> / ${g.jetzt.name}`
+                 ).join("\n\n") + `\n`;
+        }
+        if (nichtErreicht.length) {
+          out += `\n${DOT_OFF} <b>Nicht abfragbar (${nichtErreicht.length})</b>\n` +
+                 nichtErreicht.map(u => `${u.handle} / ${u.name}`).join("\n") + `\n` +
+                 `\n<i>Diese Personen kennt der Bot nicht gut genug. Sie müssen ihm einmal /start schreiben.</i>`;
+        }
+        if (out.length <= 3800) {
+          await sendTelegramMessage(chatId, out);
+        } else {
+          let block = "";
+          for (const line of out.split("\n")) {
+            if ((block + line).length > 3800) { await sendTelegramMessage(chatId, block); block = ""; }
+            block += line + "\n";
+          }
+          if (block.trim()) await sendTelegramMessage(chatId, block);
+        }
+      } else {
+        await sendWelcomeMenu(chatId);
+      }
     } else if (text === "/kontrolle") {
       // Nur Besitzer: geht die Liste durch und setzt die Punkte neu.
       if (String(chatId) === String(YOUR_CHAT_ID)) {
@@ -1364,6 +1443,7 @@ async function handleUpdate(update) {
           `/fehlen — im Warteraum, aber nicht im Hauptkanal\n` +
           `/gespeichert — wen der Bot im Speicher hat\n` +
           `/kontrolle — Liste durchgehen: wem kann ich schreiben? (🟢/🔴)\n` +
+          `/usernames — Usernamen und Namen bei Telegram neu abfragen\n` +
           `/wartezimmer — Willkommensnachricht in den Warteraum posten\n` +
           `/hauptkanal — Sortiment in den Hauptkanal posten\n` +
           `/befehle — diese Übersicht\n\n` +

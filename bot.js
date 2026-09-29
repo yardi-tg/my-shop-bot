@@ -118,6 +118,8 @@ async function dbLoad() {
       dbMessageId = pinned.message_id;
       const bk = (pinned.text.match(/#bk:(\d{4}-\d{2}-\d{2})/) || [])[1];
       if (bk) lastBackupDay = bk;   // überlebt Server-Neustarts
+      // Falls der Bot sich früher selbst eingetragen hat: jetzt still entfernen
+      if (await botAusListeEntfernen()) await dbSave();
     }
   } catch (e) { console.error("dbLoad:", e.message); }
 }
@@ -165,7 +167,31 @@ function findUser(query) {
 // ── Dialogzustand für /sterne (Schritt für Schritt) ───────────
 // Läuft nur im Besitzer-Chat. Verfällt nach 10 Minuten und bei Neustart.
 let starDialog = null;   // { step: "wer"|"wieviel", target, since }
-let restoreWaiting = false;   // wartet auf zurückgeschickte Sicherung
+let restoreSeit = 0;          // Zeitpunkt von /system — nur danach wird wiederhergestellt
+const RESTORE_FENSTER = 10 * 60 * 1000;   // 10 Minuten
+const restoreBereit = () => restoreSeit && (Date.now() - restoreSeit) < RESTORE_FENSTER;
+
+// Die eigene ID dieses Bots. Wird gebraucht, damit sich der Bot nie selbst in
+// die Liste einträgt (Telegram meldet z. B. sein eigenes Anpinnen als "Nachricht vom Bot").
+let eigeneBotId = null;
+async function holeEigeneBotId() {
+  if (eigeneBotId) return eigeneBotId;
+  try {
+    const r = await fetch(`${TELEGRAM_API}/getMe`);
+    const j = await r.json();
+    if (j.ok && j.result?.id) eigeneBotId = String(j.result.id);
+  } catch (e) { console.error("getMe:", e.message); }
+  return eigeneBotId;
+}
+
+// Entfernt den Bot selbst aus der Liste. Gibt true zurück, wenn etwas entfernt wurde.
+async function botAusListeEntfernen() {
+  const id = await holeEigeneBotId();
+  if (!id) return false;
+  const vorher = knownUsers.length;
+  knownUsers = knownUsers.filter(u => String(u.id) !== id);
+  return knownUsers.length !== vorher;
+}
 const DIALOG_TIMEOUT = 10 * 60 * 1000;
 
 function dialogAlive() {
@@ -322,6 +348,8 @@ function rememberUser(u) {
 async function rememberFrom(from) {
   if (!from?.id) return;
   if (String(from.id) === String(YOUR_CHAT_ID)) return;   // dich selbst nicht
+  if (from.is_bot) return;                                 // keine Bots — auch nicht sich selbst
+  if (String(from.id) === (await holeEigeneBotId())) return;
   const handle = from.username ? `@${from.username}` : "kein Username";
   const name = [from.first_name, from.last_name].filter(Boolean).join(" ") || "Unbekannt";
   await dbLoad();
@@ -1023,6 +1051,10 @@ async function handleUpdate(update) {
     const chatId = message.chat?.id;
     if (!chatId) return res.json({ ok: true });
 
+    // Telegram meldet "Nachricht wurde angepinnt" als eigene Nachricht — und zwar
+    // vom Bot selbst. Die komplett ignorieren: kein Eintrag, kein Menü, nichts.
+    if (message.pinned_message) return res.json({ ok: true });
+
     const text = message.text || "";
     const firstName = message.from?.first_name || "there";
 
@@ -1045,26 +1077,36 @@ async function handleUpdate(update) {
       return res.json({ ok: true });
     }
 
-    // ── Zurückgeschickte Sicherung einlesen (nur Besitzer) ──
+    // ── Zurückgeschickte Sicherung einlesen (nur Besitzer, nur nach /system) ──
     if (String(chatId) === String(YOUR_CHAT_ID) && text && text.startsWith(DB_MARKER)) {
+      // Ohne vorheriges /system passiert NICHTS — so kann eine versehentlich
+      // eingefügte alte Sicherung nie die aktuellen Sterne überschreiben.
+      if (!restoreBereit()) {
+        await sendTelegramMessage(chatId,
+          `📦 <b>Das ist eine Sicherung.</b>\n\n` +
+          `Nichts wurde verändert. Zum Wiederherstellen erst /system tippen, ` +
+          `dann die Sicherung nochmal schicken.`
+        );
+        return res.json({ ok: true });
+      }
       const parsed = textToUsers(text);
       if (!parsed) {
         await sendTelegramMessage(chatId,
           `⚠️ <b>Konnte die Sicherung nicht lesen.</b>\n\n` +
           `Der Datenteil unter der Trennlinie fehlt oder wurde verändert. ` +
-          `Bitte eine unveränderte Sicherung schicken.`
+          `Bitte eine unveränderte Sicherung schicken, oder /abbrechen.`
         );
-        restoreWaiting = false;
-        return res.json({ ok: true });
+        return res.json({ ok: true });   // Fenster bleibt offen für einen zweiten Versuch
       }
       knownUsers = parsed;
-      dbMessageId = null;          // neu senden + anpinnen erzwingen
+      await botAusListeEntfernen();      // falls die Sicherung den Bot selbst enthält
+      dbMessageId = null;                // neu senden + anpinnen erzwingen
       dbLoaded = true;
-      restoreWaiting = false;
+      restoreSeit = 0;
       await dbSave();
       const mitSternen = knownUsers.filter(u => (u.stars || 0) > 0).length;
       await sendTelegramMessage(chatId,
-        `♻️ <b>Speicher wiederhergestellt</b>\n\n` +
+        `♻️ <b>System wiederhergestellt</b>\n\n` +
         `${knownUsers.length} Personen eingelesen, davon <b>${mitSternen}</b> mit Sternen.\n` +
         `Die neue Übersicht ist angepinnt.`
       );
@@ -1394,25 +1436,19 @@ async function handleUpdate(update) {
           await sendTelegramMessage(chatId, `📭 <i>Speicher ist leer — nichts zu prüfen.</i>`);
           return res.json({ ok: true });
         }
-        await sendTelegramMessage(chatId,
-          `🔎 <b>Prüfe ${knownUsers.length} Personen…</b>\n` +
-          `<i>Es wird nichts verschickt. Dauert etwa ${Math.ceil(knownUsers.length * 0.2)} Sekunden.</i>`
-        );
-        const { nichtErreichbar, neuGruen, neuRot } = await listePruefen();
-        const erreichbar = knownUsers.length - nichtErreichbar.length;
+        await sendTelegramMessage(chatId, `🔎 <i>Prüfe ${knownUsers.length} Personen…</i>`);
+        await listePruefen();
 
-        let out = `✅ <b>Prüfung fertig</b>\n\n` +
-                  `${DOT_ON} erreichbar: <b>${erreichbar}</b>\n` +
-                  `${DOT_OFF} nicht erreichbar: <b>${nichtErreichbar.length}</b>\n`;
-        if (neuGruen.length) out += `\n🔄 <b>Neu auf ${DOT_ON} (${neuGruen.length})</b>\n` +
-                                    neuGruen.map(u => `${u.handle} / ${u.name}`).join("\n") + `\n`;
-        if (neuRot.length)   out += `\n🔄 <b>Neu auf ${DOT_OFF} (${neuRot.length})</b>\n` +
-                                    neuRot.map(u => `${u.handle} / ${u.name}`).join("\n") + `\n`;
-        if (nichtErreichbar.length) {
-          out += `\n${DOT_OFF} <b>Kann ich nicht schreiben</b>\n` +
-                 nichtErreichbar.map((u, i) => `${i + 1}. ${u.handle} / ${u.name}`).join("\n") + `\n` +
-                 `\n<i>Sterne kannst du ihnen trotzdem geben — der Bot versucht es immer und sagt dir, ob es ankam.</i>`;
-        }
+        // Schlicht: zwei Listen, jede Person genau einmal.
+        const gruen = knownUsers.filter(u => u.kontakt);
+        const rot   = knownUsers.filter(u => !u.kontakt);
+        const zeile = (u, i) => `${i + 1}. ${u.handle} / ${u.name}`;
+
+        let out = `🔎 <b>Kontrolle — ${knownUsers.length} Personen</b>\n`;
+        out += `\n${DOT_ON} <b>Erreichbar (${gruen.length})</b>\n` +
+               (gruen.length ? gruen.map(zeile).join("\n") : `<i>niemand</i>`) + `\n`;
+        out += `\n${DOT_OFF} <b>Nicht erreichbar (${rot.length})</b>\n` +
+               (rot.length ? rot.map(zeile).join("\n") : `<i>niemand</i>`) + `\n`;
         if (out.length <= 3800) {
           await sendTelegramMessage(chatId, out);
         } else {
@@ -1436,7 +1472,7 @@ async function handleUpdate(update) {
           `/sterne — Sterne vergeben (fragt Schritt für Schritt)\n` +
           `/abbrechen — laufenden Vorgang abbrechen\n` +
           `/sternestand — Übersicht: wer hat wie viele Sterne\n` +
-          `/sternesystem — Speicher aus einer Sicherung wiederherstellen\n\n` +
+          `/system — alles aus einer Sicherung wiederherstellen\n\n` +
           `🔒 <b>Verwaltung</b>\n` +
           `/code — heutiger Zugangscode\n` +
           `/heute — wer heute im Warteraum angenommen wurde\n` +
@@ -1469,20 +1505,26 @@ async function handleUpdate(update) {
       }
     } else if (text === "/abbrechen") {
       if (String(chatId) === String(YOUR_CHAT_ID)) {
-        if (starDialog) { starDialog = null; await sendTelegramMessage(chatId, `❌ Abgebrochen.`); }
+        if (starDialog || restoreBereit()) {
+          starDialog = null;
+          restoreSeit = 0;
+          await sendTelegramMessage(chatId, `❌ Abgebrochen.`);
+        }
         else await sendTelegramMessage(chatId, `<i>Es läuft gerade nichts.</i>`);
       } else {
         await sendWelcomeMenu(chatId);
       }
-    } else if (text === "/sternesystem") {
+    } else if (text === "/system" || text === "/sternesystem") {
+      // "/sternesystem" ist der alte Name — bleibt still erhalten, weil ältere
+      // 3-Uhr-Sicherungen ihn noch nennen.
       if (String(chatId) === String(YOUR_CHAT_ID)) {
-        restoreWaiting = true;
+        restoreSeit = Date.now();
         await sendTelegramMessage(chatId,
-          `♻️ <b>Speicher wiederherstellen</b>\n\n` +
+          `♻️ <b>System wiederherstellen</b>\n\n` +
           `Schick mir jetzt eine der täglichen Sicherungen (die Nachricht, die mit ` +
           `„${DB_MARKER}" beginnt).\n\n` +
           `Ich lese sie ein, schicke sie neu und pinne sie an.\n` +
-          `<i>Abbrechen mit /abbrechen.</i>`
+          `<i>Du hast 10 Minuten. Abbrechen mit /abbrechen.</i>`
         );
       } else {
         await sendWelcomeMenu(chatId);
@@ -1526,7 +1568,7 @@ async function dailyBackup() {
       `🔑 <b>Heutiger Zugangscode:</b> <code>${getTodaysCode()}</code>\n\n` +
       `<i>Tägliche Sicherung — ${knownUsers.length} Personen, ${mitSternen} mit Sternen. ` +
       `Diese Nachricht aufbewahren: Falls die angepinnte Übersicht verloren geht, ` +
-      `mit /sternesystem und der folgenden Nachricht wiederherstellen.</i>`
+      `mit /system und der folgenden Nachricht wiederherstellen.</i>`
     );
     // Die Sicherung selbst OHNE HTML senden — Namen könnten < > & enthalten
     await fetch(`${TELEGRAM_API}/sendMessage`, {
